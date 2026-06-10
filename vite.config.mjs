@@ -3,6 +3,32 @@ import react from '@vitejs/plugin-react';
 import { existsSync } from 'fs';
 import { resolve } from 'path';
 import { defineConfig } from 'vite';
+import sirv from 'sirv';
+
+// Local game assets live outside the repo, in the sibling DEV/Nitro-Files dir
+// (same layout Nitro-V3 uses). Serve them with a dedicated sirv middleware so
+// the dev server can reach .nitro/gamedata/swf without putting ~tens of
+// thousands of files under public/ (which would choke chokidar on Windows).
+const nitroFilesRoot = resolve(__dirname, '..', 'Nitro-Files');
+const nitroAssetsRoot = resolve(nitroFilesRoot, 'nitro-assets');
+const swfRoot = resolve(nitroFilesRoot, 'swf');
+
+const nitroAssetsServer = () => ({
+    name: 'nitro-assets-serve',
+    configureServer(server)
+    {
+        if(existsSync(nitroAssetsRoot)) server.middlewares.use('/nitro-assets', sirv(nitroAssetsRoot, { dev: true, etag: true, maxAge: 0 }));
+        else server.config.logger.warn(`[nitro-assets-serve] ${ nitroAssetsRoot } not found — /nitro-assets/* will 404.`);
+
+        if(existsSync(swfRoot)) server.middlewares.use('/swf', sirv(swfRoot, { dev: true, etag: true, maxAge: 0 }));
+        else server.config.logger.warn(`[nitro-assets-serve] ${ swfRoot } not found — /swf/* will 404.`);
+    },
+    configurePreviewServer(server)
+    {
+        if(existsSync(nitroAssetsRoot)) server.middlewares.use('/nitro-assets', sirv(nitroAssetsRoot, { dev: false, etag: true }));
+        if(existsSync(swfRoot)) server.middlewares.use('/swf', sirv(swfRoot, { dev: false, etag: true }));
+    }
+});
 
 // Consume the local Nitro_Render_V3 (2.1.0) working tree as the renderer SDK
 // instead of npm-installed packages. The renderer is a sibling of this repo
@@ -25,7 +51,7 @@ if(!existsSync(rendererRoot))
 }
 
 export default defineConfig({
-    plugins: [ react() ],
+    plugins: [ react(), nitroAssetsServer() ],
     // Pre-bundle the CJS/React-ecosystem deps up front in a single optimize pass.
     // Without this, Vite discovers them incrementally as components load and triggers
     // a full page reload on each new dep — which, combined with the large aliased
