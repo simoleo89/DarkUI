@@ -26,6 +26,19 @@ if(!existsSync(rendererRoot))
 
 export default defineConfig({
     plugins: [ react() ],
+    // Pre-bundle the CJS/React-ecosystem deps up front in a single optimize pass.
+    // Without this, Vite discovers them incrementally as components load and triggers
+    // a full page reload on each new dep — which, combined with the large aliased
+    // renderer source tree, makes the dev server thrash and never settle on first run.
+    optimizeDeps: {
+        include: [
+            'react', 'react-dom', 'react-dom/client', 'react/jsx-runtime', 'react/jsx-dev-runtime',
+            'react-bootstrap', 'react-draggable', 'react-slider', 'react-youtube',
+            'react-use-websocket', 'react-icons', 'react-canvas-confetti', 'react-confetti',
+            'react-countdown', 'axios', 'emoji-toolkit', 'use-between', 'usehooks-ts',
+            '@tanstack/react-virtual', '@fortawesome/fontawesome-svg-core', '@fortawesome/react-fontawesome'
+        ]
+    },
     server: {
         host: '127.0.0.1',
         port: 5181,
