@@ -7,6 +7,17 @@
 // at the actual renderer source, so consumers need no changes.
 export * from '@nitrots/nitro-renderer-real';
 
+import { GetConfiguration as _GetConfig } from '@nitrots/nitro-renderer-real';
+
+// 2.1.0 replaced the static `NitroConfiguration` holder with the
+// `GetConfiguration()` manager. Delegate the handful of members consumers use
+// (`getValue`, `interpolate`, `setValue`) to the live manager.
+export const NitroConfiguration = {
+    getValue<T>(key: string, value: T = null as any): T { return _GetConfig().getValue<T>(key, value); },
+    interpolate(value: string, regex?: RegExp): string { return _GetConfig().interpolate(value, regex as any); },
+    setValue<T>(key: string, value: T): void { _GetConfig().setValue<T>(key, value); }
+};
+
 // Helpers that moved out of the renderer into client space (Nitro-V3 keeps them
 // under src/api/utils too).
 export { FriendlyTime } from './api/utils/FriendlyTime';
