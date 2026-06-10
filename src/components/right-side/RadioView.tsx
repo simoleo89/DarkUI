@@ -3,7 +3,7 @@ import { GetConfiguration } from '../../api';
 import { FaPause, FaPlay } from 'react-icons/fa';
 
 const RadioView = () => {
-  const radioUrl = GetConfiguration('stream.url') || ''; // Ensure radioUrl is defined
+  const radioUrl = (GetConfiguration<string>('stream.url') || '') as string; // Ensure radioUrl is defined
   const [volume, setVolume] = useState(50);
   const [isPlaying, setIsPlaying] = useState(false);
   const [error, setError] = useState('');

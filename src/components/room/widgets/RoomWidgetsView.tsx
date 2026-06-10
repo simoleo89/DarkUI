@@ -19,7 +19,7 @@ export const RoomWidgetsView: FC<{}> = props =>
     const { roomSession = null } = useRoom();
     const { simpleAlert = null } = useNotification();
 
-    useRoomEngineEvent<RoomZoomEvent>(RoomZoomEvent.ROOM_ZOOM, event => GetRoomEngine().setRoomInstanceRenderingCanvasScale(event.roomId, 1, event.level, null, null, false, event.asDelta));
+    useRoomEngineEvent<RoomZoomEvent>(RoomZoomEvent.ROOM_ZOOM, event => GetRoomEngine().setRoomInstanceRenderingCanvasScale(event.roomId, 1, event.level, null, null, event.isFlipForced));
 
     useRoomEngineEvent<RoomEngineObjectEvent>(
         [

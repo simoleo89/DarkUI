@@ -122,11 +122,11 @@ export const ContextMenuView: FC<ContextMenuViewProps> = props =>
     {
         if(!elementRef.current) return;
         
-        const update = (time: number) =>
+        const update = (ticker: any) =>
         {
             if(!elementRef.current) return;
 
-            updateFade(time);
+            updateFade(ticker?.deltaTime ?? ticker);
 
             const bounds = GetRoomObjectBounds(GetRoomSession().roomId, objectId, category);
             const location = GetRoomObjectScreenLocation(GetRoomSession().roomId, objectId, category);

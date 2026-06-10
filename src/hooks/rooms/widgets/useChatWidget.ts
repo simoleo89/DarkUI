@@ -54,16 +54,16 @@ const useChatWidgetState = () =>
 
         if(!avatarImage) return;
 
-        const image = avatarImage.getCroppedImage(AvatarSetType.HEAD);
+        const imageUrl = avatarImage.processAsImageUrl(AvatarSetType.HEAD);
         const color = avatarImage.getPartColor(AvatarFigurePartType.CHEST);
 
         avatarColorCache.set(figure, ((color && color.rgb) || 16777215));
 
         avatarImage.dispose();
 
-        avatarImageCache.set(figure, image.src);
+        avatarImageCache.set(figure, imageUrl);
 
-        return image.src;
+        return imageUrl;
     }
 
     const getUserImage = (figure: string) =>
@@ -87,7 +87,7 @@ const useChatWidgetState = () =>
 
         if(image)
         {
-            existing = TextureUtils.generateImageUrl(image.data);
+            existing = (TextureUtils.generateCanvas(image.data) as HTMLCanvasElement).toDataURL();
 
             petImageCache.set((figure + posture), existing);
         }

@@ -4,7 +4,7 @@ import { GetRoomEngine } from '..';
 
 export class WiredSelectionVisualizer
 {
-    private static _selectionShader: NitroFilter = new WiredSelectionFilter([ 1, 1, 1 ], [ 0.6, 0.6, 0.6 ]);
+    private static _selectionShader: NitroFilter = new WiredSelectionFilter({ lineColor: [ 1, 1, 1 ], color: [ 0.6, 0.6, 0.6 ] } as any);
 
     public static show(furniId: number): void
     {
@@ -49,7 +49,7 @@ export class WiredSelectionVisualizer
 
         for(const sprite of visualization.sprites)
         {
-            if(sprite.blendMode === 1) continue; // BLEND_MODE: ADD
+            if((sprite.blendMode as any) === 1 || sprite.blendMode === 'add') continue; // BLEND_MODE: ADD
 
             sprite.filters = [ WiredSelectionVisualizer._selectionShader ];
         }

@@ -46,16 +46,12 @@ export const LayoutFurniImageView: FC<LayoutFurniImageViewProps> = props =>
         let imageResult: ImageResult = null;
 
         const listener: IGetImageListener = {
-            imageReady: (id, texture, image) =>
+            imageReady: (result) =>
             {
-                if(!image && texture)
-                {
-                    image = TextureUtils.generateImage(texture);
-                }
-
-                image.onload = () => setImageElement(image);
+                if(result.image) setImageElement(result.image);
+                else if(result.data) TextureUtils.generateImage(result.data).then(img => { if(img) setImageElement(img); });
             },
-            imageFailed: null
+            imageFailed: (_id: number) => {}
         };
 
         switch(productType.toLocaleLowerCase())
@@ -70,9 +66,8 @@ export const LayoutFurniImageView: FC<LayoutFurniImageViewProps> = props =>
 
         if(imageResult)
         {
-            const image = imageResult.getImage();
-
-            image.onload = () => setImageElement(image);
+            if(imageResult.image) setImageElement(imageResult.image);
+            else imageResult.getImage().then(img => { if(img) setImageElement(img); });
         }
     }, [ productType, productClassId, direction, extraData ]);
 

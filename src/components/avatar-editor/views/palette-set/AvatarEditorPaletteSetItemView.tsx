@@ -25,7 +25,7 @@ export const AvatarEditorPaletteSetItem: FC<AvatarEditorPaletteSetItemProps> = p
     }, [ colorItem ]);
 
     return (
-        <LayoutGridItemNative itemHighlight itemColor={ colorItem.color } itemActive={ colorItem.isSelected } color className="clear-bg" { ...rest }>
+        <LayoutGridItemNative itemHighlight itemColor={ colorItem.color } itemActive={ colorItem.isSelected } className="clear-bg" { ...rest }>
             { !hcDisabled && colorItem.isHC && <LayoutCurrencyIcon className="position-absolute end-1 bottom-1" type="hc" /> }
             { children }
         </LayoutGridItemNative>

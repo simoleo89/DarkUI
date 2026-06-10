@@ -68,39 +68,51 @@ export const LayoutPetImageView: FC<LayoutPetImageViewProps> = props =>
         if(petTypeId === 16) petHeadOnly = false;
 
         const imageResult = GetRoomEngine().getRoomObjectPetImage(petTypeId, petPaletteId, petColor1, new Vector3d((direction * 45)), 64, {
-            imageReady: (id, texture, image) =>
+            imageReady: (result) =>
             {
                 if(isDisposed.current) return;
 
-                if(image)
+                if(result.image)
                 {
-                    setPetUrl(image.src);
-                    setWidth(image.width);
-                    setHeight(image.height);
+                    setPetUrl(result.image.src);
+                    setWidth(result.image.width);
+                    setHeight(result.image.height);
                 }
-
-                else if(texture)
+                else if(result.data)
                 {
-                    setPetUrl(TextureUtils.generateImageUrl(texture));
-                    setWidth(texture.width);
-                    setHeight(texture.height);
+                    TextureUtils.generateImageUrl(result.data).then(url =>
+                    {
+                        if(!isDisposed.current && url)
+                        {
+                            setPetUrl(url);
+                            setWidth(result.data.width);
+                            setHeight(result.data.height);
+                        }
+                    });
                 }
             },
-            imageFailed: (id) =>
-            {
-
-            }
+            imageFailed: (_id: number) => {}
         }, petHeadOnly, 0, petCustomParts, posture);
 
         if(imageResult)
         {
-            const image = imageResult.getImage();
-
-            if(image)
+            if(imageResult.image)
             {
-                setPetUrl(image.src);
-                setWidth(image.width);
-                setHeight(image.height);
+                setPetUrl(imageResult.image.src);
+                setWidth(imageResult.image.width);
+                setHeight(imageResult.image.height);
+            }
+            else
+            {
+                imageResult.getImage().then(img =>
+                {
+                    if(img)
+                    {
+                        setPetUrl(img.src);
+                        setWidth(img.width);
+                        setHeight(img.height);
+                    }
+                });
             }
         }
     }, [ figure, typeId, paletteId, petColor, customParts, posture, headOnly, direction ]);

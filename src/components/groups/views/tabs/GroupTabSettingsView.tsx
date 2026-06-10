@@ -39,7 +39,7 @@ export const GroupTabSettingsView: FC<GroupTabSettingsViewProps> = props =>
             return true;
         }
 
-        SendMessageComposer(new GroupSavePreferencesComposer(groupData.groupId, groupState, groupDecorate ? 0 : 1));
+        SendMessageComposer(new GroupSavePreferencesComposer(groupData.groupId, groupState, groupDecorate ? 0 : 1, false));
 
         return true;
     }, [ groupData, groupState, groupDecorate, setGroupData ]);

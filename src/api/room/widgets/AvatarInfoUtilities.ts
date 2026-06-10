@@ -148,7 +148,7 @@ export class AvatarInfoUtilities
             roomObjectImage = GetRoomEngine().getRoomObjectImage(roomSession.roomId, objectId, category, new Vector3d(180), 1, null);
         }
 
-        furniInfo.image = roomObjectImage.getImage();
+        furniInfo.image = roomObjectImage.image;
         furniInfo.isWallItem = (category === RoomObjectCategory.WALL);
         furniInfo.isRoomOwner = roomSession.isRoomOwner;
         furniInfo.roomControllerLevel = roomSession.controllerLevel;

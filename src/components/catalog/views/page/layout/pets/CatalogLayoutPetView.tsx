@@ -203,7 +203,7 @@ export const CatalogLayoutPetView: FC<CatalogLayoutProps> = props =>
 						</LayoutGridItem>
 					)) }
 					{ colorsShowing && (sellableColors.length > 0) && sellableColors.map((colorSet, index) => (
-						<LayoutGridItem key={index} itemHighlight itemActive={selectedColorIndex === index} lassName="clear-bg" onClick={() => setSelectedColorIndex(index)} >
+						<LayoutGridItem key={index} itemHighlight itemActive={selectedColorIndex === index} className="clear-bg" onClick={() => setSelectedColorIndex(index)} >
 							<div style={{ width: '100%', height: '100%', backgroundColor: ColorConverter.int2rgb(colorSet[0]) }} />
 						</LayoutGridItem>
 					)) }

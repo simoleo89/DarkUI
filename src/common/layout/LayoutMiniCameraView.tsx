@@ -1,4 +1,5 @@
-import { NitroRectangle, NitroRenderTexture } from '@nitrots/nitro-renderer';
+import { NitroRectangle } from '@nitrots/nitro-renderer';
+import { Texture } from 'pixi.js';
 import { FC, useRef } from 'react';
 import { GetRoomEngine, LocalizeText, PlaySound, SoundNames } from '../../api';
 import { DraggableWindow } from '../draggable-window';
@@ -6,7 +7,7 @@ import { DraggableWindow } from '../draggable-window';
 interface LayoutMiniCameraViewProps
 {
     roomId: number;
-    textureReceiver: (texture: NitroRenderTexture) => void;
+    textureReceiver: (texture: Texture) => void;
     onClose: () => void;
 }
 

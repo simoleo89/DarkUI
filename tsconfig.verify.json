@@ -1,0 +1,31 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "skipLibCheck": true,
+    "ignoreDeprecations": "6.0",
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"],
+      "@nitrots/nitro-renderer": ["src/nitro-renderer-compat.ts"],
+      "@nitrots/nitro-renderer-real": ["../renderer/index.ts"],
+      "@nitrots/api": ["../renderer/packages/api/src/index.ts"],
+      "@nitrots/assets": ["../renderer/packages/assets/src/index.ts"],
+      "@nitrots/avatar": ["../renderer/packages/avatar/src/index.ts"],
+      "@nitrots/camera": ["../renderer/packages/camera/src/index.ts"],
+      "@nitrots/communication": ["../renderer/packages/communication/src/index.ts"],
+      "@nitrots/configuration": ["../renderer/packages/configuration/src/index.ts"],
+      "@nitrots/events": ["../renderer/packages/events/src/index.ts"],
+      "@nitrots/localization": ["../renderer/packages/localization/src/index.ts"],
+      "@nitrots/room": ["../renderer/packages/room/src/index.ts"],
+      "@nitrots/session": ["../renderer/packages/session/src/index.ts"],
+      "@nitrots/sound": ["../renderer/packages/sound/src/index.ts"],
+      "@nitrots/utils/src": ["../renderer/packages/utils/src"],
+      "@nitrots/utils": ["../renderer/packages/utils/src/index.ts"],
+      "pixi.js": ["../renderer/node_modules/pixi.js/lib/index.d.ts"],
+      "pixi-filters": ["../renderer/node_modules/pixi-filters/lib/index.d.ts"]
+    }
+  },
+  "include": ["src"],
+  "exclude": ["submodules", "node_modules", "dist"]
+}

@@ -4,6 +4,8 @@ import { GetUserProfile, LocalizeText, SendMessageComposer } from '../../../../a
 import { Column, LayoutAvatarImageView, NitroCardAccordionSetViewProps, Text, UserProfileIconView } from '../../../../common';
 import { useFriends, useMessageEvent } from '../../../../hooks';
 
+export interface FriendsSearchViewProps extends NitroCardAccordionSetViewProps {}
+
 export const FriendsSearchView: FC<FriendsSearchViewProps> = props =>
 {
     const { ...rest } = props;

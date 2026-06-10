@@ -10,6 +10,7 @@ export interface LayoutAvatarImageViewProps extends BaseProps<HTMLDivElement>
     headOnly?: boolean;
     direction?: number;
     scale?: number;
+    isgroup?: number;
 }
 
 export const LayoutAvatarImageView: FC<LayoutAvatarImageViewProps> = props =>
@@ -68,9 +69,9 @@ export const LayoutAvatarImageView: FC<LayoutAvatarImageViewProps> = props =>
 
         avatarImage.setDirection(setType, direction);
 
-        const image = avatarImage.getCroppedImage(setType);
+        const imageUrl = avatarImage.processAsImageUrl(setType);
 
-        if(image) setAvatarUrl(image.src);
+        if(imageUrl) setAvatarUrl(imageUrl);
 
         avatarImage.dispose();
     }, [ figure, gender, direction, headOnly, randomValue ]);

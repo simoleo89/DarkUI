@@ -9,6 +9,7 @@ import { CatalogNavigationSetView } from "./CatalogNavigationSetView";
 export interface CatalogNavigationItemViewProps {
   node: ICatalogNode;
   child?: boolean;
+  favourite?: boolean;
 }
 
 export const CatalogNavigationItemView: FC<CatalogNavigationItemViewProps> = (

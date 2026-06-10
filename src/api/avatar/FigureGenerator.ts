@@ -55,7 +55,7 @@ function getRandomColors(palette: IPalette, partSet: IFigurePartSet, clubLevel: 
 
 export function generateRandomFigure(figureData: FigureData, gender: string, clubLevel: number = 0, figureSetIds: number[] = [], ignoredSets: string[] = []): string
 {
-    const structure = GetAvatarRenderManager().structure;
+    const structure: any = GetAvatarRenderManager().structureData;
     const figureContainer = new AvatarFigureContainer('');
     const requiredSets = getRandomSetTypes(structure.getMandatorySetTypeIds(gender, clubLevel), FigureData.SET_TYPES);
 

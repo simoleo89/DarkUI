@@ -1,5 +1,6 @@
+import { FindNewFriendsMessageComposer } from '@nitrots/nitro-renderer';
 import { FC, useState } from 'react';
-import { LocalizeText, MessengerFriend } from '../../../../api';
+import { LocalizeText, MessengerFriend, SendMessageComposer } from '../../../../api';
 import { Button, Flex, Text } from '../../../../common';
 import { FriendBarItemView } from './FriendBarItemView';
 import { FaChevronDown, FaChevronUp, FaUser } from "react-icons/fa";

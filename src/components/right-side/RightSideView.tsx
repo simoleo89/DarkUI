@@ -17,7 +17,7 @@ export const RightSideView: FC<{}> = () => {
 
     useEffect(() => {
         const fetchRadioConfig = async () => {
-            const enabled = GetConfiguration('radioplayer');
+            const enabled = GetConfiguration<boolean>('radioplayer') ?? false;
             setRadioEnabled(enabled);
         };
 

@@ -52,9 +52,12 @@ export const CameraWidgetCaptureView: FC<CameraWidgetCaptureViewProps> = props =
         }
 
         PlaySound(SoundNames.CAMERA_SHUTTER);
-        clone.push(new CameraPicture(texture, TextureUtils.generateImageUrl(texture)));
 
-        setCameraRoll(clone);
+        TextureUtils.generateImageUrl(texture).then(url =>
+        {
+            clone.push(new CameraPicture(texture, url ?? ''));
+            setCameraRoll(clone);
+        });
     }
 
     return (

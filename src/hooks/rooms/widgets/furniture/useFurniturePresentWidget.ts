@@ -52,16 +52,12 @@ const useFurniturePresentWidgetState = () =>
     const imageListener: IGetImageListener = useMemo(() =>
     {
         return {
-            imageReady: (id, texture, image) =>
+            imageReady: (result) =>
             {
-                if(!image && texture)
-                {
-                    image = TextureUtils.generateImage(texture);
-                }
-
-                setImageUrl(image.src);
+                if(result.image) setImageUrl(result.image.src);
+                else if(result.data) TextureUtils.generateImageUrl(result.data).then(url => { if(url) setImageUrl(url); });
             },
-            imageFailed: null
+            imageFailed: (_id: number) => {}
         }
     }, []);
 
@@ -167,14 +163,22 @@ const useFurniturePresentWidgetState = () =>
 
                         const petImage = GetRoomEngine().getRoomObjectPetImage(petFigureData.typeId, petFigureData.paletteId, petFigureData.color, new Vector3d(90), 64, imageListener, true, 0, petFigureData.customParts);
 
-                        if(petImage) setImageUrl(petImage.getImage().src);
+                        if(petImage)
+                        {
+                            if(petImage.image) setImageUrl(petImage.image.src);
+                            else petImage.getImage().then(img => { if(img) setImageUrl(img.src); });
+                        }
                     }
                 }
                 else
                 {
                     const furniImage = GetRoomEngine().getFurnitureFloorImage(event.classId, new Vector3d(90), 64, imageListener);
 
-                    if(furniImage) setImageUrl(furniImage.getImage().src);
+                    if(furniImage)
+                    {
+                        if(furniImage.image) setImageUrl(furniImage.image.src);
+                        else furniImage.getImage().then(img => { if(img) setImageUrl(img.src); });
+                    }
                 }
 
                 const productData = GetSessionDataManager().getProductData(event.productCode);

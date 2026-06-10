@@ -95,7 +95,7 @@ export const CatalogView: FC<{}> = props =>
             { isVisible &&
                 <NitroCardView uniqueKey="catalog" className="nitro-catalog" style={GetConfiguration('catalog.headers') ? { width: 710 } : {}}>
                     <NitroCardHeaderView headerText={LocalizeText('catalog.title')} onCloseClick={event => setIsVisible(false)} />
-                    <NitroCardTabsView subClassName="w-100">
+                    <NitroCardTabsView>
                         {rootNode && rootNode.children.length > 0 && rootNode.children.map((child, index) => {
                                 if (!child.isVisible) return null;
                                 // Generate a unique key using the index of the map function

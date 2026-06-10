@@ -15,7 +15,7 @@ export const EnablesView: FC<{}> = props =>
     }
 
     const getEffectsData = () => {
-        const effectsUrl = GetConfiguration('enable-list.url') || '';
+        const effectsUrl = (GetConfiguration<string>('enable-list.url') || '') as string;
 
         fetch(effectsUrl)
             .then(response => response.json())

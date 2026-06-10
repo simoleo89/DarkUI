@@ -1,4 +1,4 @@
-import { AvatarExpressionEnum, GetTicker, HabboClubLevelEnum, RoomControllerLevel, RoomEngineObjectEvent, RoomObjectCategory, RoomRotatingEffect, RoomSessionChatEvent, RoomSettingsComposer, RoomShakingEffect, RoomZoomEvent, TextureUtils } from '@nitrots/nitro-renderer';
+import { AvatarExpressionEnum, GetEventDispatcher, GetTicker, HabboClubLevelEnum, RoomControllerLevel, RoomEngineObjectEvent, RoomObjectCategory, RoomRotatingEffect, RoomSessionChatEvent, RoomSettingsComposer, RoomShakingEffect, RoomZoomEvent, TextureUtils } from '@nitrots/nitro-renderer';
 import { useEffect, useState } from 'react';
 import { ChatMessageTypeEnum, CreateLinkEvent, GetClubMemberLevel, GetConfiguration, GetRoomEngine, GetSessionDataManager, LocalizeText, SendMessageComposer } from '../../../api';
 import { useRoomEngineEvent, useRoomSessionManagerEvent } from '../../events';
@@ -104,23 +104,26 @@ const useChatInputWidgetState = () =>
                     return null;
                 case ':iddqd':
                 case ':flip':
-                    GetRoomEngine().events.dispatchEvent(new RoomZoomEvent(roomSession.roomId, -1, true));
+                    GetEventDispatcher().dispatchEvent(new RoomZoomEvent(roomSession.roomId, -1, true));
 
                     return null;
                 case ':zoom':
-                    GetRoomEngine().events.dispatchEvent(new RoomZoomEvent(roomSession.roomId, parseFloat(secondPart), false));
+                    GetEventDispatcher().dispatchEvent(new RoomZoomEvent(roomSession.roomId, parseFloat(secondPart), false));
 
                     return null;
-                case ':screenshot':
+                case ':screenshot': {
                     const texture = GetRoomEngine().createTextureFromRoom(roomSession.roomId, 1);
 
-                    const image = new Image();
-                    
-                    image.src = TextureUtils.generateImageUrl(texture);
-                    
-                    const newWindow = window.open('');
-                    newWindow.document.write(image.outerHTML);
+                    TextureUtils.generateImageUrl(texture).then(url =>
+                    {
+                        const image = new Image();
+                        image.src = url ?? '';
+                        const newWindow = window.open('');
+                        if(newWindow) newWindow.document.write(image.outerHTML);
+                    });
+
                     return null;
+                }
                 case ':pickall':
                     if(roomSession.isRoomOwner || GetSessionDataManager().isModerator)
                     {
