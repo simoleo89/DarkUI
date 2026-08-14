@@ -1,16 +1,15 @@
 import { FC, useEffect } from 'react';
-import { useCatalog } from '../../../../../hooks';
+import { useCatalogData, useCatalogUiState } from '../../../../../hooks';
 
-export const CatalogFirstProductSelectorWidgetView: FC<{}> = props =>
-{
-    const { currentPage = null, setCurrentOffer = null } = useCatalog();
+export const CatalogFirstProductSelectorWidgetView: FC<{}> = (props) => {
+    const { currentPage = null } = useCatalogData();
+    const { setCurrentOffer = null } = useCatalogUiState();
 
-    useEffect(() =>
-    {
-        if(!currentPage || !currentPage.offers.length) return;
+    useEffect(() => {
+        if (!currentPage || !currentPage.offers.length) return;
 
         setCurrentOffer(currentPage.offers[0]);
-    }, [ currentPage, setCurrentOffer ]);
+    }, [currentPage, setCurrentOffer]);
 
     return null;
-}
+};

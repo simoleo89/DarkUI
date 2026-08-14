@@ -1,27 +1,62 @@
 import { FC, useEffect, useState } from 'react';
-import { LocalizeText, WiredFurniType } from '../../../../api';
-import { Column, Text } from '../../../../common';
+import { LocalizeText, localizeWithFallback, WiredFurniType } from '../../../../api';
+import { Text } from '../../../../common';
 import { useWired } from '../../../../hooks';
+import { NitroInput } from '../../../../layout';
+import { WiredSourcesSelector } from '../WiredSourcesSelector';
 import { WiredConditionBaseView } from './WiredConditionBaseView';
 
-export const WiredConditionActorIsWearingBadgeView: FC<{}> = props =>
-{
-    const [ badge, setBadge ] = useState('');
-    const { trigger = null, setStringParam = null } = useWired();
+interface WiredConditionActorIsWearingBadgeViewProps {
+    negative?: boolean;
+}
 
-    const save = () => setStringParam(badge);
+export const WiredConditionActorIsWearingBadgeView: FC<WiredConditionActorIsWearingBadgeViewProps> = ({ negative = false }) => {
+    const [badge, setBadge] = useState('');
+    const [quantifier, setQuantifier] = useState(1);
+    const { trigger = null, setStringParam = null, setIntParams = null } = useWired();
+    const [userSource, setUserSource] = useState<number>(() => {
+        if (trigger?.intData?.length >= 1) return trigger.intData[0];
+        return 0;
+    });
 
-    useEffect(() =>
-    {
+    const save = () => {
+        setStringParam(badge);
+        setIntParams([userSource, quantifier]);
+    };
+
+    useEffect(() => {
         setBadge(trigger.stringData);
-    }, [ trigger ]);
-    
+        if (trigger.intData.length >= 1) setUserSource(trigger.intData[0]);
+        else setUserSource(0);
+        setQuantifier(trigger.intData.length >= 2 ? (trigger.intData[1] === 1 ? 1 : 0) : 1);
+    }, [trigger]);
+
     return (
-        <WiredConditionBaseView requiresFurni={ WiredFurniType.STUFF_SELECTION_OPTION_NONE } hasSpecialInput={ true } save={ save }>
-            <Column gap={ 1 }>
-                <Text bold>{ LocalizeText('wiredfurni.params.badgecode') }</Text>
-                <input type="text" className="form-control form-control-sm" value={ badge } onChange={ event => setBadge(event.target.value) } />
-            </Column>
+        <WiredConditionBaseView
+            hasSpecialInput={true}
+            requiresFurni={WiredFurniType.STUFF_SELECTION_OPTION_NONE}
+            save={save}
+            footer={<WiredSourcesSelector showUsers={true} userSource={userSource} onChangeUsers={setUserSource} />}
+        >
+            <div className="flex flex-col gap-1">
+                <Text bold>{LocalizeText('wiredfurni.params.quantifier_selection')}</Text>
+                {[0, 1].map((value) => (
+                    <label key={value} className="flex items-center gap-1">
+                        <input
+                            checked={quantifier === value}
+                            className="form-check-input"
+                            name="badgeQuantifier"
+                            type="radio"
+                            onChange={() => setQuantifier(value)}
+                        />
+                        <Text>{LocalizeText(`wiredfurni.params.quantifier.users${negative ? '.neg' : ''}.${value}`)}</Text>
+                    </label>
+                ))}
+            </div>
+            <div className="flex flex-col gap-1">
+                <Text bold>{localizeWithFallback('wiredfurni.params.badgecode', 'Badge code')}</Text>
+                <NitroInput type="text" value={badge} onChange={(event) => setBadge(event.target.value)} />
+            </div>
         </WiredConditionBaseView>
     );
-}
+};

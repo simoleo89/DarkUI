@@ -1,7 +1,6 @@
 import { NotificationBubbleType } from './NotificationBubbleType';
 
-export class NotificationBubbleItem
-{
+export class NotificationBubbleItem {
     private static ITEM_ID: number = -1;
 
     private _id: number;
@@ -9,9 +8,15 @@ export class NotificationBubbleItem
     private _notificationType: string;
     private _iconUrl: string;
     private _linkUrl: string;
+    private _senderName: string;
 
-    constructor(message: string, notificationType: string = NotificationBubbleType.INFO, iconUrl: string = null, linkUrl: string = null)
-    {
+    constructor(
+        message: string,
+        notificationType: string = NotificationBubbleType.INFO,
+        iconUrl: string = null,
+        linkUrl: string = null,
+        senderName: string = ''
+    ) {
         NotificationBubbleItem.ITEM_ID += 1;
 
         this._id = NotificationBubbleItem.ITEM_ID;
@@ -19,30 +24,30 @@ export class NotificationBubbleItem
         this._notificationType = notificationType;
         this._iconUrl = iconUrl;
         this._linkUrl = linkUrl;
+        this._senderName = senderName;
     }
 
-    public get id(): number
-    {
+    public get id(): number {
         return this._id;
     }
 
-    public get message(): string
-    {
+    public get message(): string {
         return this._message;
     }
 
-    public get notificationType(): string
-    {
+    public get notificationType(): string {
         return this._notificationType;
     }
 
-    public get iconUrl(): string
-    {
+    public get iconUrl(): string {
         return this._iconUrl;
     }
 
-    public get linkUrl(): string
-    {
+    public get linkUrl(): string {
         return this._linkUrl;
+    }
+
+    public get senderName(): string {
+        return this._senderName;
     }
 }

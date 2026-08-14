@@ -1,1 +1,18 @@
-export type ColorVariantType = 'primary-ui' | 'primary-ui-two' | 'primary' | 'success' | 'danger' | 'secondary' | 'link' | 'black' | 'white' | 'dark' | 'warning' | 'muted' | 'light';
+export type ColorVariantType =
+    | 'primary'
+    | 'success'
+    | 'danger'
+    | 'secondary'
+    | 'link'
+    | 'black'
+    | 'white'
+    | 'dark'
+    | 'warning'
+    | 'muted'
+    | 'light'
+    | 'gray'
+    | 'outline-primary'
+    | 'outline-secondary'
+    | 'outline-success'
+    | 'outline-danger'
+    | 'outline-warning';

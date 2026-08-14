@@ -1,6 +1,6 @@
 import { RoomBannedUsersComposer, RoomDataParser, RoomSettingsDataEvent, SaveRoomSettingsComposer } from '@nitrots/nitro-renderer';
 import { FC, useState } from 'react';
-import { IRoomData, LocalizeText, SendMessageComposer } from '../../../../api';
+import { CreateLinkEvent, IRoomData, LocalizeText, SendMessageComposer } from '../../../../api';
 import { NitroCardContentView, NitroCardHeaderView, NitroCardTabsItemView, NitroCardTabsView, NitroCardView } from '../../../../common';
 import { useMessageEvent } from '../../../../hooks';
 import { NavigatorRoomSettingsAccessTabView } from './NavigatorRoomSettingsAccessTabView';
@@ -17,16 +17,14 @@ const TABS: string[] = [
     'navigator.roomsettings.tab.5'
 ];
 
-export const NavigatorRoomSettingsView: FC<{}> = props =>
-{
-    const [ roomData, setRoomData ] = useState<IRoomData>(null);
-    const [ currentTab, setCurrentTab ] = useState(TABS[0]);
+export const NavigatorRoomSettingsView: FC<{}> = (props) => {
+    const [roomData, setRoomData] = useState<IRoomData>(null);
+    const [currentTab, setCurrentTab] = useState(TABS[0]);
 
-    useMessageEvent<RoomSettingsDataEvent>(RoomSettingsDataEvent, event =>
-    {
+    useMessageEvent<RoomSettingsDataEvent>(RoomSettingsDataEvent, (event) => {
         const parser = event.getParser();
 
-        if(!parser) return;
+        if (!parser) return;
 
         const data = parser.data;
 
@@ -39,6 +37,13 @@ export const NavigatorRoomSettingsView: FC<{}> = props =>
             tags: data.tags,
             tradeState: data.tradeMode,
             allowWalkthrough: data.allowWalkThrough,
+            allowUnderpass: data.allowUnderpass,
+            muteAllPets: data.muteAllPets,
+            leaveOnDoorTileEnabled: data.leaveOnDoorTileEnabled,
+            idleSleepEnabled: data.idleSleepEnabled,
+            idleSleepTimeoutSeconds: data.idleSleepTimeoutSeconds,
+            idleAutokickEnabled: data.idleAutokickEnabled,
+            idleAutokickTimeoutSeconds: data.idleAutokickTimeoutSeconds,
             lockState: data.doorMode,
             password: null,
             allowPets: data.allowPets,
@@ -63,20 +68,16 @@ export const NavigatorRoomSettingsView: FC<{}> = props =>
         SendMessageComposer(new RoomBannedUsersComposer(data.roomId));
     });
 
-    const onClose = () =>
-    {
+    const onClose = () => {
         setRoomData(null);
         setCurrentTab(TABS[0]);
-    }
+    };
 
-    const handleChange = (field: string, value: string | number | boolean | string[]) =>
-    {
-        setRoomData(prevValue =>
-        {
+    const handleChange = (field: string, value: string | number | boolean | string[]) => {
+        setRoomData((prevValue) => {
             const newValue = { ...prevValue };
 
-            switch(field)
-            {
+            switch (field) {
                 case 'name':
                     newValue.roomName = String(value);
                     break;
@@ -97,6 +98,27 @@ export const NavigatorRoomSettingsView: FC<{}> = props =>
                     break;
                 case 'allow_walkthrough':
                     newValue.allowWalkthrough = Boolean(value);
+                    break;
+                case 'allow_underpass':
+                    newValue.allowUnderpass = Boolean(value);
+                    break;
+                case 'mute_all_pets':
+                    newValue.muteAllPets = Boolean(value);
+                    break;
+                case 'leave_on_door_tile_enabled':
+                    newValue.leaveOnDoorTileEnabled = Boolean(value);
+                    break;
+                case 'idle_sleep_enabled':
+                    newValue.idleSleepEnabled = Boolean(value);
+                    break;
+                case 'idle_sleep_timeout_seconds':
+                    newValue.idleSleepTimeoutSeconds = Number(value);
+                    break;
+                case 'idle_autokick_enabled':
+                    newValue.idleAutokickEnabled = Boolean(value);
+                    break;
+                case 'idle_autokick_timeout_seconds':
+                    newValue.idleAutokickTimeoutSeconds = Number(value);
                     break;
                 case 'allow_pets':
                     newValue.allowPets = Boolean(value);
@@ -153,7 +175,7 @@ export const NavigatorRoomSettingsView: FC<{}> = props =>
                     newValue.roomDescription,
                     newValue.lockState,
                     newValue.password,
-                    newValue.userCount,
+                    Math.max(1, Math.min(200, Number(newValue.userCount) || 1)),
                     newValue.categoryId,
                     newValue.tags.length,
                     newValue.tags,
@@ -170,36 +192,58 @@ export const NavigatorRoomSettingsView: FC<{}> = props =>
                     newValue.chatSettings.mode,
                     newValue.chatSettings.weight,
                     newValue.chatSettings.speed,
-                    newValue.chatSettings.distance,
-                    newValue.chatSettings.protection
-                ));
+                    Math.max(1, Math.min(99, Number(newValue.chatSettings.distance) || 1)),
+                    newValue.chatSettings.protection,
+                    newValue.allowUnderpass,
+                    newValue.muteAllPets,
+                    newValue.leaveOnDoorTileEnabled,
+                    newValue.idleSleepEnabled,
+                    newValue.idleSleepEnabled ? Math.max(30, Math.min(3600, Number(newValue.idleSleepTimeoutSeconds) || 30)) : 0,
+                    newValue.idleAutokickEnabled,
+                    newValue.idleAutokickEnabled
+                        ? Math.max(
+                              newValue.idleSleepEnabled ? (Number(newValue.idleSleepTimeoutSeconds) || 30) + 30 : 60,
+                              Math.min(36000, Number(newValue.idleAutokickTimeoutSeconds) || 60)
+                          )
+                        : 0
+                )
+            );
 
             return newValue;
         });
-    }
+    };
 
-    if(!roomData) return null;
+    if (!roomData) return null;
 
     return (
-        <NitroCardView uniqueKey="nitro-room-settings" className="nitro-room-settings">
-            <NitroCardHeaderView headerText={ LocalizeText('navigator.roomsettings') } onCloseClick={ onClose } />
+        <NitroCardView
+            className="nitro-room-settings min-w-0 w-[min(420px,calc(100vw-16px))] h-[min(620px,calc(100vh-16px))] max-w-[calc(100vw-16px)]"
+            isResizable={false}
+            uniqueKey="nitro-room-settings"
+        >
+            <NitroCardHeaderView
+                headerText={LocalizeText('navigator.roomsettings')}
+                isInfoToHabboPages={currentTab === TABS[3]}
+                onClickInfoHabboPages={() => {
+                    if (currentTab === TABS[3]) CreateLinkEvent('habbopages/chat/options');
+                }}
+                onCloseClick={onClose}
+            />
             <NitroCardTabsView>
-                { TABS.map(tab =>
-                {
-                    return <NitroCardTabsItemView key={ tab } isActive={ (currentTab === tab) } onClick={ event => setCurrentTab(tab) }>{ LocalizeText(tab) }</NitroCardTabsItemView>
-                }) }
+                {TABS.map((tab) => {
+                    return (
+                        <NitroCardTabsItemView key={tab} isActive={currentTab === tab} onClick={(event) => setCurrentTab(tab)}>
+                            {LocalizeText(tab)}
+                        </NitroCardTabsItemView>
+                    );
+                })}
             </NitroCardTabsView>
-            <NitroCardContentView>
-                { (currentTab === TABS[0]) &&
-                    <NavigatorRoomSettingsBasicTabView roomData={ roomData } handleChange={ handleChange } onClose={ onClose } /> }
-                { (currentTab === TABS[1]) &&
-                    <NavigatorRoomSettingsAccessTabView roomData={ roomData } handleChange={ handleChange } /> }
-                { (currentTab === TABS[2]) &&
-                    <NavigatorRoomSettingsRightsTabView roomData={ roomData } handleChange={ handleChange } /> }
-                { (currentTab === TABS[3]) &&
-                    <NavigatorRoomSettingsVipChatTabView roomData={ roomData } handleChange={ handleChange } /> }
-                { (currentTab === TABS[4]) &&
-                    <NavigatorRoomSettingsModTabView roomData={ roomData } handleChange={ handleChange } /> }
+            <NitroCardContentView overflow="hidden">
+                {currentTab === TABS[0] && <NavigatorRoomSettingsBasicTabView handleChange={handleChange} roomData={roomData} onClose={onClose} />}
+                {currentTab === TABS[1] && <NavigatorRoomSettingsAccessTabView handleChange={handleChange} roomData={roomData} />}
+                {currentTab === TABS[2] && <NavigatorRoomSettingsRightsTabView handleChange={handleChange} roomData={roomData} />}
+                {currentTab === TABS[3] && <NavigatorRoomSettingsVipChatTabView handleChange={handleChange} roomData={roomData} />}
+                {currentTab === TABS[4] && <NavigatorRoomSettingsModTabView handleChange={handleChange} roomData={roomData} />}
             </NitroCardContentView>
         </NitroCardView>
     );

@@ -2,29 +2,23 @@ import { RoomControllerLevel, RoomObjectOperationType } from '@nitrots/nitro-ren
 import { FC } from 'react';
 import { FaArrowsAlt, FaSyncAlt, FaTrashRestore } from 'react-icons/fa';
 import { AvatarInfoFurni, ProcessRoomObjectOperation } from '../../../../../api';
-import { Flex } from '../../../../../common';
 import { ContextMenuHeaderView } from '../../context-menu/ContextMenuHeaderView';
 import { ContextMenuListItemView } from '../../context-menu/ContextMenuListItemView';
 import { ContextMenuView } from '../../context-menu/ContextMenuView';
 
-interface AvatarInfoWidgetFurniViewProps
-{
+interface AvatarInfoWidgetFurniViewProps {
     avatarInfo: AvatarInfoFurni;
     onClose: () => void;
 }
 
-export const AvatarInfoWidgetFurniView: FC<AvatarInfoWidgetFurniViewProps> = props =>
-{
+export const AvatarInfoWidgetFurniView: FC<AvatarInfoWidgetFurniViewProps> = (props) => {
     const { avatarInfo = null, onClose = null } = props;
 
-    const processAction = (name: string) =>
-    {
+    const processAction = (name: string) => {
         let hideMenu = true;
 
-        if(name)
-        {
-            switch(name)
-            {
+        if (name) {
+            switch (name) {
                 case 'move':
                     ProcessRoomObjectOperation(avatarInfo.id, avatarInfo.category, RoomObjectOperationType.OBJECT_MOVE);
                     break;
@@ -39,29 +33,31 @@ export const AvatarInfoWidgetFurniView: FC<AvatarInfoWidgetFurniViewProps> = pro
                     break;
             }
         }
-    }
+    };
 
     return (
-        <ContextMenuView objectId={ avatarInfo.id } category={ avatarInfo.category } onClose={ onClose } collapsable={ true }>
-            <ContextMenuHeaderView>
-                { avatarInfo.name }
-            </ContextMenuHeaderView>
-            <Flex className="menu-list-split-3">
-                <ContextMenuListItemView onClick={ event => processAction('move') }>
+        <ContextMenuView category={avatarInfo.category} collapsable={true} objectId={avatarInfo.id} onClose={onClose}>
+            <ContextMenuHeaderView>{avatarInfo.name}</ContextMenuHeaderView>
+            <div className="flex menu-list-split-3">
+                <ContextMenuListItemView onClick={(event) => processAction('move')}>
                     <FaArrowsAlt className="center fa-icon" />
                 </ContextMenuListItemView>
-                <ContextMenuListItemView onClick={ event => processAction('rotate') } disabled={ avatarInfo.isWallItem }>
+                <ContextMenuListItemView disabled={avatarInfo.isWallItem} onClick={(event) => processAction('rotate')}>
                     <FaSyncAlt className="center fa-icon" />
                 </ContextMenuListItemView>
-                { (avatarInfo.isOwner || avatarInfo.isAnyRoomController) &&
-                    <ContextMenuListItemView onClick={ event => processAction('pickup') }>
+                {(avatarInfo.isOwner || avatarInfo.isAnyRoomController) && (
+                    <ContextMenuListItemView onClick={(event) => processAction('pickup')}>
                         <FaTrashRestore className="center fa-icon" />
-                    </ContextMenuListItemView> }
-                { (!avatarInfo.isOwner && !avatarInfo.isAnyRoomController) && (avatarInfo.isRoomOwner || (avatarInfo.roomControllerLevel >= RoomControllerLevel.GUILD_ADMIN)) &&
-                    <ContextMenuListItemView onClick={ event => processAction('eject') }>
-                        <FaTrashRestore className="center fa-icon" />
-                    </ContextMenuListItemView> }
-            </Flex>
+                    </ContextMenuListItemView>
+                )}
+                {!avatarInfo.isOwner &&
+                    !avatarInfo.isAnyRoomController &&
+                    (avatarInfo.isRoomOwner || avatarInfo.roomControllerLevel >= RoomControllerLevel.GUILD_ADMIN) && (
+                        <ContextMenuListItemView onClick={(event) => processAction('eject')}>
+                            <FaTrashRestore className="center fa-icon" />
+                        </ContextMenuListItemView>
+                    )}
+            </div>
         </ContextMenuView>
     );
-}
+};

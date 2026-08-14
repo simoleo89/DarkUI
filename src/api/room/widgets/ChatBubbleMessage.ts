@@ -1,7 +1,4 @@
-import { INitroPoint } from '@nitrots/nitro-renderer';
-
-export class ChatBubbleMessage
-{
+export class ChatBubbleMessage {
     public static BUBBLE_COUNTER: number = 0;
 
     public id: number = -1;
@@ -9,10 +6,24 @@ export class ChatBubbleMessage
     public height: number = 0;
     public elementRef: HTMLDivElement = null;
     public skipMovement: boolean = false;
+    public prefixText: string = '';
+    public prefixColor: string = '';
+    public prefixIcon: string = '';
+    public prefixEffect: string = '';
+    public prefixFont: string = '';
+    public nickIcon: string = '';
+    public displayOrder: string = 'icon-prefix-name';
+    public originalText: string = '';
+    public originalFormattedText: string = '';
+    public translatedText: string = '';
+    public translatedFormattedText: string = '';
+    public showTranslation: boolean = false;
+    public translationDetectedLanguage: string = '';
+    public translationTargetLanguage: string = '';
 
     private _top: number = 0;
     private _left: number = 0;
-    
+
     constructor(
         public senderId: number = -1,
         public senderCategory: number = -1,
@@ -20,37 +31,34 @@ export class ChatBubbleMessage
         public text: string = '',
         public formattedText: string = '',
         public username: string = '',
-        public location: INitroPoint = null,
+        public location: { x: number; y: number } = null,
         public type: number = 0,
         public styleId: number = 0,
         public imageUrl: string = null,
         public color: string = null
-    ) 
-    {
+    ) {
         this.id = ++ChatBubbleMessage.BUBBLE_COUNTER;
+        this.originalText = text;
+        this.originalFormattedText = formattedText;
     }
 
-    public get top(): number
-    {
+    public get top(): number {
         return this._top;
     }
 
-    public set top(value: number)
-    {
+    public set top(value: number) {
         this._top = value;
 
-        if(this.elementRef) this.elementRef.style.top = (this._top + 'px');
+        if (this.elementRef) this.elementRef.style.top = this._top + 'px';
     }
 
-    public get left(): number
-    {
+    public get left(): number {
         return this._left;
     }
 
-    public set left(value: number)
-    {
+    public set left(value: number) {
         this._left = value;
 
-        if(this.elementRef) this.elementRef.style.left = (this._left + 'px');
+        if (this.elementRef) this.elementRef.style.left = this._left + 'px';
     }
 }

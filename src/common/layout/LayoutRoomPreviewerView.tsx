@@ -1,97 +1,132 @@
-import { ColorConverter, GetTicker, IRoomRenderingCanvas, RoomPreviewer, TextureUtils } from '@nitrots/nitro-renderer';
-import { FC, MouseEvent, ReactNode, useEffect, useRef, useState } from 'react';
+import { GetRenderer, GetTicker, NitroLogger, NitroTicker, RoomPreviewer, TextureUtils } from '@nitrots/nitro-renderer';
+import { FC, MouseEvent, useEffect, useRef } from 'react';
 
-export interface LayoutRoomPreviewerViewProps
-{
+export const LayoutRoomPreviewerView: FC<{
     roomPreviewer: RoomPreviewer;
     height?: number;
-    children?: ReactNode;
-}
+}> = (props) => {
+    const { roomPreviewer = null, height = 0 } = props;
+    const elementRef = useRef<HTMLDivElement>(null);
+    // Counter that disables further renders once Pixi throws in this
+    // previewer too many times in a row. The Pixi v8 null-texture bug
+    // (see src/pixiPatch.ts) is mostly absorbed at the prototype level,
+    // but any stray throw still cascades every animation frame. Allow
+    // a small number of consecutive failures so a transient bad frame
+    // self-recovers; permanently disable only if the previewer is truly
+    // wedged, which is what produces the "disabling further renders"
+    // log the user sees.
+    const renderFailuresRef = useRef(0);
+    const MAX_RENDER_FAILURES = 6;
 
-export const LayoutRoomPreviewerView: FC<LayoutRoomPreviewerViewProps> = props =>
-{
-    const { roomPreviewer = null, height = 0, children = null } = props;
-    const [ renderingCanvas, setRenderingCanvas ] = useState<IRoomRenderingCanvas>(null);
-    const elementRef = useRef<HTMLDivElement>();
+    const onClick = (event: MouseEvent<HTMLDivElement>) => {
+        if (!roomPreviewer) return;
 
-    const onClick = (event: MouseEvent<HTMLDivElement>) =>
-    {
-        if(!roomPreviewer) return;
-
-        if(event.shiftKey) roomPreviewer.changeRoomObjectDirection();
+        if (event.shiftKey) roomPreviewer.changeRoomObjectDirection();
         else roomPreviewer.changeRoomObjectState();
-    }
+    };
 
-    useEffect(() =>
-    {
-        if(!roomPreviewer) return;
+    useEffect(() => {
+        if (!elementRef) return;
 
-        const update = (time: number) =>
-        {
-            if(!roomPreviewer || !renderingCanvas || !elementRef.current) return;
-        
-            roomPreviewer.updatePreviewRoomView();
+        renderFailuresRef.current = 0;
 
-            if(!renderingCanvas.canvasUpdated) return;
+        const width = elementRef.current.parentElement.clientWidth;
+        const texture = TextureUtils.createRenderTexture(width, height);
 
-            elementRef.current.style.backgroundImage = `url(${ TextureUtils.generateImageUrl(renderingCanvas.master) })`;
-        }
+        const noteFailure = (label: string, error: unknown) => {
+            renderFailuresRef.current += 1;
 
-        if(!renderingCanvas)
-        {
-            if(elementRef.current && roomPreviewer)
-            {
-                const computed = document.defaultView.getComputedStyle(elementRef.current, null);
-
-                let backgroundColor = computed.backgroundColor;
-
-                backgroundColor = ColorConverter.rgbStringToHex(backgroundColor);
-                backgroundColor = backgroundColor.replace('#', '0x');
-
-                roomPreviewer.backgroundColor = parseInt(backgroundColor, 16);
-
-                const width = elementRef.current.parentElement.clientWidth;
-                
-                roomPreviewer.getRoomCanvas(width, height);
-
-                const canvas = roomPreviewer.getRenderingCanvas();
-
-                setRenderingCanvas(canvas);
-
-                canvas.canvasUpdated = true;
-
-                update(-1);
+            if (renderFailuresRef.current >= MAX_RENDER_FAILURES) {
+                NitroLogger.error(
+                    `LayoutRoomPreviewerView ${label} failed ${renderFailuresRef.current} times; disabling further renders for this preview`,
+                    error
+                );
             }
-        }
+        };
+
+        const paintToDOM = () => {
+            if (renderFailuresRef.current >= MAX_RENDER_FAILURES) return;
+            if (!roomPreviewer || !elementRef.current) return;
+
+            const renderingCanvas = roomPreviewer.getRenderingCanvas();
+
+            if (!renderingCanvas) return;
+
+            try {
+                GetRenderer().render({
+                    target: texture,
+                    container: renderingCanvas.master,
+                    clear: true
+                });
+
+                const canvas = GetRenderer().texture.generateCanvas(texture);
+                const base64 = canvas.toDataURL('image/png');
+
+                canvas.width = 0;
+                canvas.height = 0;
+
+                elementRef.current.style.backgroundImage = `url(${base64})`;
+                // A successful paint is the signal we've recovered from
+                // a transient bad frame; reset the failure counter.
+                renderFailuresRef.current = 0;
+            } catch (error) {
+                noteFailure('paint', error);
+            }
+        };
+
+        const update = (ticker: NitroTicker) => {
+            if (renderFailuresRef.current >= MAX_RENDER_FAILURES) return;
+            if (!roomPreviewer || !elementRef.current) return;
+
+            try {
+                roomPreviewer.updatePreviewRoomView();
+            } catch (error) {
+                noteFailure('update', error);
+                return;
+            }
+
+            const renderingCanvas = roomPreviewer.getRenderingCanvas();
+
+            if (renderingCanvas && renderingCanvas.canvasUpdated) {
+                paintToDOM();
+            }
+        };
 
         GetTicker().add(update);
 
-        const resizeObserver = new ResizeObserver(() =>
-        {
-            if(!roomPreviewer || !elementRef.current) return;
+        const resizeObserver = new ResizeObserver(() => {
+            if (!roomPreviewer || !elementRef.current) return;
 
             const width = elementRef.current.parentElement.offsetWidth;
 
             roomPreviewer.modifyRoomCanvas(width, height);
 
-            update(-1);
+            paintToDOM();
         });
-        
+
+        roomPreviewer.getRoomCanvas(width, height);
+
         resizeObserver.observe(elementRef.current);
 
-        return () =>
-        {
+        return () => {
+            GetTicker().remove(update);
+
             resizeObserver.disconnect();
 
-            GetTicker().remove(update);
-        }
-
-    }, [ renderingCanvas, roomPreviewer, elementRef, height ]);
+            texture.destroy(true);
+        };
+    }, [roomPreviewer, elementRef, height]);
 
     return (
-        <div className="room-preview-container">
-            <div ref={ elementRef } className="room-preview-image" style={ { height } } onClick={ onClick } />
-            { children }
-        </div>
+        <div
+            ref={elementRef}
+            className="relative w-full rounded-md shadow-room-previewer"
+            style={{
+                height,
+                minHeight: height,
+                maxHeight: height
+            }}
+            onClick={onClick}
+        />
     );
-}
+};

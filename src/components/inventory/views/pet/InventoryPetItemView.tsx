@@ -1,21 +1,19 @@
 import { MouseEventType } from '@nitrots/nitro-renderer';
 import { FC, MouseEvent, PropsWithChildren, useState } from 'react';
 import { attemptPetPlacement, IPetItem, UnseenItemCategory } from '../../../../api';
-import { LayoutGridItem, LayoutPetImageView } from '../../../../common';
+import { LayoutPetImageView } from '../../../../common';
 import { useInventoryPets, useInventoryUnseenTracker } from '../../../../hooks';
+import { InfiniteGrid } from '../../../../layout';
 
-export const InventoryPetItemView: FC<PropsWithChildren<{ petItem: IPetItem }>> = props =>
-{
+export const InventoryPetItemView: FC<PropsWithChildren<{ petItem: IPetItem }>> = (props) => {
     const { petItem = null, children = null, ...rest } = props;
-    const [ isMouseDown, setMouseDown ] = useState(false);
+    const [isMouseDown, setMouseDown] = useState(false);
     const { selectedPet = null, setSelectedPet = null } = useInventoryPets();
     const { isUnseen } = useInventoryUnseenTracker();
     const unseen = isUnseen(UnseenItemCategory.PET, petItem.petData.id);
 
-    const onMouseEvent = (event: MouseEvent) =>
-    {
-        switch(event.type)
-        {
+    const onMouseEvent = (event: MouseEvent) => {
+        switch (event.type) {
             case MouseEventType.MOUSE_DOWN:
                 setSelectedPet(petItem);
                 setMouseDown(true);
@@ -24,7 +22,7 @@ export const InventoryPetItemView: FC<PropsWithChildren<{ petItem: IPetItem }>> 
                 setMouseDown(false);
                 return;
             case MouseEventType.ROLL_OUT:
-                if(!isMouseDown || !(petItem === selectedPet)) return;
+                if (!isMouseDown || !(petItem === selectedPet)) return;
 
                 attemptPetPlacement(petItem);
                 return;
@@ -32,12 +30,20 @@ export const InventoryPetItemView: FC<PropsWithChildren<{ petItem: IPetItem }>> 
                 attemptPetPlacement(petItem);
                 return;
         }
-    }
+    };
 
     return (
-        <LayoutGridItem itemActive={ (petItem === selectedPet) } itemUnseen={ unseen } onMouseDown={ onMouseEvent } onMouseUp={ onMouseEvent } onMouseOut={ onMouseEvent } onDoubleClick={ onMouseEvent } { ...rest }>
-            <LayoutPetImageView figure={ petItem.petData.figureData.figuredata } direction={ 3 } headOnly={ true } />
-            { children }
-        </LayoutGridItem>
+        <InfiniteGrid.Item
+            itemActive={petItem === selectedPet}
+            itemUnseen={unseen}
+            onDoubleClick={onMouseEvent}
+            onMouseDown={onMouseEvent}
+            onMouseOut={onMouseEvent}
+            onMouseUp={onMouseEvent}
+            {...rest}
+        >
+            <LayoutPetImageView direction={3} figure={petItem.petData.figureData.figuredata} headOnly={true} />
+            {children}
+        </InfiniteGrid.Item>
     );
-}
+};

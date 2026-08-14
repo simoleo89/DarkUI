@@ -1,42 +1,30 @@
-import { GetTicker, ILinkEventTracker, NitroSettingsEvent, UserSettingsCameraFollowComposer, UserSettingsEvent, UserSettingsOldChatComposer, UserSettingsRoomInvitesComposer, UserSettingsSoundComposer } from '@nitrots/nitro-renderer';
+import { AddLinkEventTracker, CreateLinkEvent, ILinkEventTracker, NitroSettingsEvent, RemoveLinkEventTracker, SoundboardSaveVolumeComposer, UserSettingsCameraFollowComposer, UserSettingsEvent, UserSettingsOldChatComposer, UserSettingsPrivacyComposer, UserSettingsRoomInvitesComposer, UserSettingsSoundComposer } from '@nitrots/nitro-renderer';
 import { FC, useEffect, useState } from 'react';
-import { FaVolumeDown, FaVolumeMute, FaVolumeUp } from 'react-icons/fa';
-import { AddEventLinkTracker, DispatchMainEvent, DispatchUiEvent, GetConfiguration, LocalizeText, RemoveLinkEventTracker, SendMessageComposer } from '../../api';
-import { Column, Flex, NitroCardContentView, NitroCardHeaderView, NitroCardTabsItemView, NitroCardTabsView, NitroCardView, Text, classNames } from '../../common';
-import { useCatalogPlaceMultipleItems, useCatalogSkipPurchaseConfirmation, useMessageEvent } from '../../hooks';
+import { FaUserCog, FaVolumeDown, FaVolumeMute, FaVolumeUp } from 'react-icons/fa';
+import { DispatchMainEvent, DispatchUiEvent, LocalizeText, SendMessageComposer } from '../../api';
+import { Button, NitroCardContentView, NitroCardHeaderView, NitroCardView, Text } from '../../common';
+import { useCatalogPlaceMultipleItems, useCatalogSkipPurchaseConfirmation, useChatWindow, useMessageEvent } from '../../hooks';
+import { classNames } from '../../layout';
+import { SoundboardVolumeControl } from './SoundboardVolumeControl';
+
+const localizeWithFallback = (key: string, fallback: string) =>
+{
+    const text = LocalizeText(key);
+    return (text && text !== key) ? text : fallback;
+};
+
+// null = full window (legacy). 'audio' | 'chat' | 'other' = focused section
+// opened from the purse gear dropdown.
+type SettingsSection = null | 'audio' | 'chat' | 'other' | 'privacy';
 
 export const UserSettingsView: FC<{}> = props =>
 {
-    const [isVisible, setIsVisible] = useState(false);
-    const [userSettings, setUserSettings] = useState<NitroSettingsEvent>(null);
-    const [catalogPlaceMultipleObjects, setCatalogPlaceMultipleObjects] = useCatalogPlaceMultipleItems();
-    const [catalogSkipPurchaseConfirmation, setCatalogSkipPurchaseConfirmation] = useCatalogSkipPurchaseConfirmation();
-
-    const [section, setSection] = useState("general");
-    const [secondaryColor, setSecondaryColor] = useState(window.localStorage.getItem("colors.secondary"))
-
-    const [loaded, isLoaded] = useState(true);
-
-    const changeFps = (fps) => 
-    {
-        if (!(fps === "120" || fps === "60" || fps === "30" || fps === "0")) return;
-        window.localStorage.setItem("fps.limiter", fps);
-        GetTicker().maxFPS = fps;
-        setIsVisible(false);
-    }
-
-    const changeSecondaryColor = (value) => 
-    {
-        setSecondaryColor(value);
-        window.localStorage.setItem("colors.secondary", value);
-        document.querySelector('html').style.setProperty('--colors-secondary', value);
-    }
-
-    const resetColors = () =>
-    {
-        setSecondaryColor(GetConfiguration<string>('colors.secondary', ''))
-        window.localStorage.setItem("colors.secondary", GetConfiguration<string>('colors.secondary', ''))
-    }
+    const [ isVisible, setIsVisible ] = useState(false);
+    const [ section, setSection ] = useState<SettingsSection>(null);
+    const [ userSettings, setUserSettings ] = useState<NitroSettingsEvent>(null);
+    const [ catalogPlaceMultipleObjects, setCatalogPlaceMultipleObjects ] = useCatalogPlaceMultipleItems();
+    const [ catalogSkipPurchaseConfirmation, setCatalogSkipPurchaseConfirmation ] = useCatalogSkipPurchaseConfirmation();
+    const [ chatWindowEnabled, setChatWindowEnabled ] = useChatWindow();
 
     const processAction = (type: string, value?: boolean | number | string) =>
     {
@@ -44,7 +32,7 @@ export const UserSettingsView: FC<{}> = props =>
 
         const clone = userSettings.clone();
 
-        switch (type)
+        switch(type)
         {
             case 'close_view':
                 setIsVisible(false);
@@ -62,6 +50,18 @@ export const UserSettingsView: FC<{}> = props =>
                 clone.cameraFollow = value as boolean;
                 SendMessageComposer(new UserSettingsCameraFollowComposer(clone.cameraFollow));
                 break;
+            case 'online_status_visible':
+                clone.onlineStatusVisible = value as boolean;
+                SendMessageComposer(new UserSettingsPrivacyComposer(clone.onlineStatusVisible, clone.friendsCanFollow, clone.friendRequestsAllowed));
+                break;
+            case 'friends_can_follow':
+                clone.friendsCanFollow = value as boolean;
+                SendMessageComposer(new UserSettingsPrivacyComposer(clone.onlineStatusVisible, clone.friendsCanFollow, clone.friendRequestsAllowed));
+                break;
+            case 'friend_requests_allowed':
+                clone.friendRequestsAllowed = value as boolean;
+                SendMessageComposer(new UserSettingsPrivacyComposer(clone.onlineStatusVisible, clone.friendsCanFollow, clone.friendRequestsAllowed));
+                break;
             case 'system_volume':
                 clone.volumeSystem = value as number;
                 clone.volumeSystem = Math.max(0, clone.volumeSystem);
@@ -77,22 +77,30 @@ export const UserSettingsView: FC<{}> = props =>
                 clone.volumeTrax = Math.max(0, clone.volumeTrax);
                 clone.volumeTrax = Math.min(100, clone.volumeTrax);
                 break;
+            case 'soundboard_volume':
+                clone.volumeSoundboard = value as number;
+                clone.volumeSoundboard = Math.max(0, clone.volumeSoundboard);
+                clone.volumeSoundboard = Math.min(100, clone.volumeSoundboard);
+                break;
         }
 
-        if (doUpdate) setUserSettings(clone);
+        if(doUpdate) setUserSettings(clone);
 
-        DispatchMainEvent(clone)
-    }
+        DispatchMainEvent(clone);
+    };
 
     const saveRangeSlider = (type: string) =>
     {
-        switch (type)
+        switch(type)
         {
             case 'volume':
                 SendMessageComposer(new UserSettingsSoundComposer(Math.round(userSettings.volumeSystem), Math.round(userSettings.volumeFurni), Math.round(userSettings.volumeTrax)));
                 break;
+            case 'soundboard_volume':
+                SendMessageComposer(new SoundboardSaveVolumeComposer(Math.round(userSettings.volumeSoundboard)));
+                break;
         }
-    }
+    };
 
     useMessageEvent<UserSettingsEvent>(UserSettingsEvent, event =>
     {
@@ -102,11 +110,15 @@ export const UserSettingsView: FC<{}> = props =>
         settingsEvent.volumeSystem = parser.volumeSystem;
         settingsEvent.volumeFurni = parser.volumeFurni;
         settingsEvent.volumeTrax = parser.volumeTrax;
+        settingsEvent.volumeSoundboard = parser.volumeSoundboard;
         settingsEvent.oldChat = parser.oldChat;
         settingsEvent.roomInvites = parser.roomInvites;
         settingsEvent.cameraFollow = parser.cameraFollow;
         settingsEvent.flags = parser.flags;
         settingsEvent.chatType = parser.chatType;
+        settingsEvent.onlineStatusVisible = parser.onlineStatusVisible;
+        settingsEvent.friendsCanFollow = parser.friendsCanFollow;
+        settingsEvent.friendRequestsAllowed = parser.friendRequestsAllowed;
 
         setUserSettings(settingsEvent);
         DispatchMainEvent(settingsEvent);
@@ -119,17 +131,19 @@ export const UserSettingsView: FC<{}> = props =>
             {
                 const parts = url.split('/');
 
-                if (parts.length < 2) return;
+                if(parts.length < 2) return;
 
-                switch (parts[1])
+                switch(parts[1])
                 {
                     case 'show':
+                        setSection((parts[2] as SettingsSection) || null);
                         setIsVisible(true);
                         return;
                     case 'hide':
                         setIsVisible(false);
                         return;
                     case 'toggle':
+                        setSection((parts[2] as SettingsSection) || null);
                         setIsVisible(prevValue => !prevValue);
                         return;
                 }
@@ -137,142 +151,155 @@ export const UserSettingsView: FC<{}> = props =>
             eventUrlPrefix: 'user-settings/'
         };
 
-        AddEventLinkTracker(linkTracker);
+        AddLinkEventTracker(linkTracker);
 
         return () => RemoveLinkEventTracker(linkTracker);
     }, []);
 
     useEffect(() =>
     {
-        if (!userSettings) return;
+        if(!userSettings) return;
 
         DispatchUiEvent(userSettings);
-    }, [userSettings]);
+    }, [ userSettings ]);
 
-    if (!isVisible || !userSettings) return null;
+    if(!isVisible || !userSettings) return null;
+
+    const showChat = (section === null || section === 'chat');
+    const showOther = (section === null || section === 'other');
+    const showAudio = (section === null || section === 'audio');
+    const showPrivacy = (section === 'privacy');
+    const showAccountLink = (section === null);
+
+    const headerText = (section === 'audio')
+        ? localizeWithFallback('widget.memenu.settings.volume', 'Audio settings')
+        : (section === 'chat')
+            ? localizeWithFallback('room.chat.settings.title', 'Chat settings')
+            : (section === 'other')
+                ? localizeWithFallback('memenu.settings.other', 'Other settings')
+                : (section === 'privacy')
+                    ? localizeWithFallback('privacy.settings.title', 'Game Privacy')
+                : LocalizeText('widget.memenu.settings.title');
 
     return (
-        <>{loaded &&
-            <NitroCardView uniqueKey="user-settings" className="user-settings-window" style={{ width: "470px" }}>
-                <NitroCardHeaderView headerText={LocalizeText('widget.memenu.settings.title')} onCloseClick={event => processAction('close_view')} />
-                <NitroCardTabsView>
-                    <NitroCardTabsItemView onClick={(e) => setSection("general")} isActive={section === "general" ? true : false}>
-                        <Flex gap={0} alignItems="center">
-                            { LocalizeText('widget.settings.general') }
-                        </Flex>
-                    </NitroCardTabsItemView>
-                    <NitroCardTabsItemView onClick={(e) => setSection("volume")} isActive={section === "volume" ? true : false}>
-                        <Flex gap={0} alignItems="center">
-                            { LocalizeText('widget.settings.volume') }
-                        </Flex>
-                    </NitroCardTabsItemView>
-                    <NitroCardTabsItemView onClick={(e) => setSection("performance")} isActive={section === "performance" ? true : false}>
-                        <Flex gap={0} alignItems="center">
-                            { LocalizeText('widget.settings.interface') }
-                        </Flex>
-                    </NitroCardTabsItemView>
-                </NitroCardTabsView>
-                <NitroCardContentView className="text-black">
-                    {section === "general" &&
-                        <Column gap={1}>
-                            <div className="d-flex justify-content-between">
-                                <div>
-                                    <Text variant="white" bold fontSize={5}>{ LocalizeText('widget.settings.general.title') }</Text>
-                                </div>
-                            </div>
-                            <div className='w-100 mt-1 mb-3' style={{ borderBottom: "1px solid rgb(54, 54, 54)" }}></div>
-                            <Flex alignItems="center" gap={1}>
-                                <input className="form-check-input" type="checkbox" checked={userSettings.oldChat} onChange={event => processAction('oldchat', event.target.checked)} />
-                                <Text variant="white">{ LocalizeText('memenu.settings.chat.prefer.old.chat') }</Text>
-                            </Flex>
-                            <Flex alignItems="center" gap={1}>
-                                <input className="form-check-input" type="checkbox" checked={userSettings.roomInvites} onChange={event => processAction('room_invites', event.target.checked)} />
-                                <Text variant="white">{ LocalizeText('memenu.settings.other.ignore.room.invites') }</Text>
-                            </Flex>
-                            <Flex alignItems="center" gap={1}>
-                                <input className="form-check-input" type="checkbox" checked={userSettings.cameraFollow} onChange={event => processAction('camera_follow', event.target.checked)} />
-                                <Text variant="white">{ LocalizeText('memenu.settings.other.disable.room.camera.follow') }</Text>
-                            </Flex>
-                            <Flex alignItems="center" gap={1}>
-                                <input className="form-check-input" type="checkbox" checked={catalogPlaceMultipleObjects} onChange={event => setCatalogPlaceMultipleObjects(event.target.checked)} />
-                                <Text variant="white">{ LocalizeText('memenu.settings.other.place.multiple.objects') }</Text>
-                            </Flex>
-                            <Flex alignItems="center" gap={1}>
-                                <input className="form-check-input" type="checkbox" checked={catalogSkipPurchaseConfirmation} onChange={event => setCatalogSkipPurchaseConfirmation(event.target.checked)} />
-                                <Text variant="white">{ LocalizeText('memenu.settings.other.skip.purchase.confirmation') }</Text>
-                            </Flex>
-                        </Column>
-                    }
-
-                    {section === "volume" &&
-                        <Column>
-                            <div className="d-flex justify-content-between">
-                                <div>
-                                    <Text variant="white" bold fontSize={5}>{ LocalizeText('widget.memenu.settings.volume') }</Text>
-                                </div>
-                            </div>
-                            <div className='w-100 mt-1 mb-2' style={{ borderBottom: "1px solid rgb(54, 54, 54)" }}></div>
-                            <Column gap={1}>
-                                <Text variant="white">{ LocalizeText('widget.memenu.settings.volume.ui') }</Text>
-                                <Flex alignItems="center" gap={1}>
-                                    {(userSettings.volumeSystem === 0) && <FaVolumeMute className={classNames((userSettings.volumeSystem >= 50) && 'text-muted', 'fa-icon')} />}
-                                    {(userSettings.volumeSystem > 0) && <FaVolumeDown className={classNames((userSettings.volumeSystem >= 50) && 'text-muted', 'fa-icon')} />}
-                                    <input type="range" className="custom-range w-100" min="0" max="100" step="1" id="volumeSystem" value={userSettings.volumeSystem} onChange={event => processAction('system_volume', event.target.value)} onMouseUp={() => saveRangeSlider('volume')} />
-                                    <FaVolumeUp className={classNames((userSettings.volumeSystem < 50) ? 'text-muted' : 'text-white', 'fa-icon')} />
-                                </Flex>
-                            </Column>
-                            <Column gap={1}>
-                                <Text variant="white">{ LocalizeText('widget.memenu.settings.volume.furni') }</Text>
-                                <Flex alignItems="center" gap={1}>
-                                    {(userSettings.volumeFurni === 0) && <FaVolumeMute className={classNames((userSettings.volumeFurni >= 50) && 'text-muted', 'fa-icon')} />}
-                                    {(userSettings.volumeFurni > 0) && <FaVolumeDown className={classNames((userSettings.volumeFurni >= 50) && 'text-muted', 'fa-icon')} />}
-                                    <input type="range" className="custom-range w-100" min="0" max="100" step="1" id="volumeFurni" value={userSettings.volumeFurni} onChange={event => processAction('furni_volume', event.target.value)} onMouseUp={() => saveRangeSlider('volume')} />
-                                    <FaVolumeUp className={classNames((userSettings.volumeFurni < 50) ? 'text-muted' : 'text-white', 'fa-icon')} />
-                                </Flex>
-                            </Column>
-                            <Column gap={1}>
-                                <Text variant="white">{ LocalizeText('widget.memenu.settings.volume.trax') }</Text>
-                                <Flex alignItems="center" gap={1}>
-                                    {(userSettings.volumeTrax === 0) && <FaVolumeMute className={classNames((userSettings.volumeTrax >= 50) && 'text-muted', 'fa-icon')} />}
-                                    {(userSettings.volumeTrax > 0) && <FaVolumeDown className={classNames((userSettings.volumeTrax >= 50) && 'text-muted', 'fa-icon')} />}
-                                    <input type="range" className="custom-range w-100" min="0" max="100" step="1" id="volumeTrax" value={userSettings.volumeTrax} onChange={event => processAction('trax_volume', event.target.value)} onMouseUp={() => saveRangeSlider('volume')} />
-                                    <FaVolumeUp className={classNames((userSettings.volumeTrax < 50) ? 'text-muted' : 'text-white', 'fa-icon')} />
-                                </Flex>
-                            </Column>
-                        </Column>
-                    }
-
-                    {section === "performance" &&
-                        <div>
-                            <div className="d-flex justify-content-between">
-                                <div>
-                                    <Text variant="white" bold fontSize={5}>{ LocalizeText('widget.settings.interface.title') }</Text>
-                                </div>
-                            </div>
-                            <div className='w-100 mt-1 mb-3' style={{ borderBottom: "1px solid rgb(54, 54, 54)" }}></div>
-                            <button onClick={() => changeFps("30")} className="btn btn-sm w-100 btn-dark" style={{ marginBottom: "2px" }}>30 FPS</button>
-                            <button onClick={() => changeFps("60")} className="btn btn-sm w-100 btn-dark" style={{ marginBottom: "2px" }}>60 FPS</button>
-                            <button onClick={() => changeFps("120")} className="btn btn-sm w-100 btn-dark" style={{ marginBottom: "2px" }}>120 FPS</button>
-                            <button onClick={() => changeFps("0")} className="btn btn-sm w-100 btn-dark">{ LocalizeText('widget.settings.interface.fps.automatic') }</button>
-                            <center>
-                                <span className='badge bg-muted text-dark mt-1'>{ LocalizeText('widget.settings.interface.fps.warning') }</span>
-                            </center>
-
-                            <Column gap={1} style={{ marginTop: "30px" }}>
-                                <div className="d-flex justify-content-between">
-                                    <div>
-                                        <Text className='mt-1' variant="white" fontSize={6} bold>{ LocalizeText('widget.settings.interface.secondary') }</Text>
-                                    </div>
-                                    <div>
-                                        <input onChange={(e) => changeSecondaryColor(e.target.value)} className="form-control form-control-color" type="color" value={secondaryColor} />
-                                    </div>
-                                </div>
-                                <button onClick={() => resetColors()} className="btn btn-danger btn-sm w-50 mt-2">{ LocalizeText('widget.settings.interface.reset') }</button>
-                            </Column>
+        <NitroCardView className="user-settings-window min-w-0 max-w-[calc(100vw-16px)] max-h-[calc(100vh-16px)]" theme="primary-slim" uniqueKey="user-settings">
+            <NitroCardHeaderView headerText={ headerText } onCloseClick={ event => processAction('close_view') } />
+            <NitroCardContentView className="text-black">
+                { showChat &&
+                    <div className="flex flex-col gap-1">
+                        <div className="flex items-center gap-1">
+                            <input checked={ userSettings.oldChat } className="form-check-input" type="checkbox" onChange={ event => processAction('oldchat', event.target.checked) } />
+                            <Text>{ LocalizeText('memenu.settings.chat.prefer.old.chat') }</Text>
                         </div>
-                    }
-                </NitroCardContentView>
-            </NitroCardView>
-        }</>
+                        <div className="flex items-center gap-1">
+                            <input checked={ chatWindowEnabled } className="form-check-input" type="checkbox" onChange={ event => setChatWindowEnabled(event.target.checked) } />
+                            <Text>{ LocalizeText('memenu.settings.other.enable.chat.window') }</Text>
+                        </div>
+                    </div> }
+                { showOther &&
+                    <div className="flex flex-col gap-1">
+                        <div className="flex items-center gap-1">
+                            <input checked={ userSettings.roomInvites } className="form-check-input" type="checkbox" onChange={ event => processAction('room_invites', event.target.checked) } />
+                            <Text>{ LocalizeText('memenu.settings.other.ignore.room.invites') }</Text>
+                        </div>
+                        <div className="flex items-center gap-1">
+                            <input checked={ userSettings.cameraFollow } className="form-check-input" type="checkbox" onChange={ event => processAction('camera_follow', event.target.checked) } />
+                            <Text>{ LocalizeText('memenu.settings.other.disable.room.camera.follow') }</Text>
+                        </div>
+                        <div className="flex items-center gap-1">
+                            <input checked={ catalogPlaceMultipleObjects } className="form-check-input" type="checkbox" onChange={ event => setCatalogPlaceMultipleObjects(event.target.checked) } />
+                            <Text>{ LocalizeText('memenu.settings.other.place.multiple.objects') }</Text>
+                        </div>
+                        <div className="flex items-center gap-1">
+                            <input checked={ catalogSkipPurchaseConfirmation } className="form-check-input" type="checkbox" onChange={ event => setCatalogSkipPurchaseConfirmation(event.target.checked) } />
+                            <Text>{ LocalizeText('memenu.settings.other.skip.purchase.confirmation') }</Text>
+                        </div>
+                    </div> }
+                { showPrivacy &&
+                    <div className="flex flex-col gap-3">
+                        <div className="flex flex-col gap-1">
+                            <Text bold>{ localizeWithFallback('privacy.settings.online.title', 'Online status') }</Text>
+                            <Text>{ localizeWithFallback('settings.privacy.online_status_description', 'Who can see your online status:') }</Text>
+                            <label className="flex items-center gap-1">
+                                <input checked={ userSettings.onlineStatusVisible } className="form-check-input" name="online-status-visibility" type="radio" onChange={ () => processAction('online_status_visible', true) } />
+                                <Text>{ localizeWithFallback('settings.privacy.everyone', 'Everyone') }</Text>
+                            </label>
+                            <label className="flex items-center gap-1">
+                                <input checked={ !userSettings.onlineStatusVisible } className="form-check-input" name="online-status-visibility" type="radio" onChange={ () => processAction('online_status_visible', false) } />
+                                <Text>{ localizeWithFallback('settings.privacy.noone', 'Nobody') }</Text>
+                            </label>
+                        </div>
+                        <div className="flex flex-col gap-1">
+                            <Text bold>{ localizeWithFallback('privacy.settings.follow.title', 'Follow settings') }</Text>
+                            <label className="flex items-center gap-1">
+                                <input checked={ userSettings.friendsCanFollow } className="form-check-input" type="checkbox" onChange={ event => processAction('friends_can_follow', event.target.checked) } />
+                                <Text>{ localizeWithFallback('settings.privacy.follow_description', 'My friends can follow me from one room to another') }</Text>
+                            </label>
+                        </div>
+                        <div className="flex flex-col gap-1">
+                            <Text bold>{ localizeWithFallback('privacy.settings.friend_requests.title', 'Friend requests') }</Text>
+                            <label className="flex items-center gap-1">
+                                <input checked={ userSettings.friendRequestsAllowed } className="form-check-input" type="checkbox" onChange={ event => processAction('friend_requests_allowed', event.target.checked) } />
+                                <Text>{ localizeWithFallback('settings.privacy.friend_requests_description', 'Other Habbos can send me a friend request') }</Text>
+                            </label>
+                        </div>
+                    </div> }
+                { showAudio &&
+                    <div className="flex flex-col">
+                        <Text bold>{ LocalizeText('widget.memenu.settings.volume') }</Text>
+                        <div className="flex flex-col gap-1">
+                            <Text>{ LocalizeText('widget.memenu.settings.volume.ui') }</Text>
+                            <div className="flex items-center gap-1">
+                                { (userSettings.volumeSystem === 0) && <FaVolumeMute className={ classNames((userSettings.volumeSystem >= 50) && 'text-muted', 'fa-icon') } /> }
+                                { (userSettings.volumeSystem > 0) && <FaVolumeDown className={ classNames((userSettings.volumeSystem >= 50) && 'text-muted', 'fa-icon') } /> }
+                                <input className="custom-range w-full" id="volumeSystem" max="100" min="0" step="1" type="range" value={ userSettings.volumeSystem } onChange={ event => processAction('system_volume', event.target.value) } onMouseUp={ () => saveRangeSlider('volume') } />
+                                <FaVolumeUp className={ classNames((userSettings.volumeSystem < 50) && 'text-muted', 'fa-icon') } />
+                            </div>
+                        </div>
+                        <div className="flex flex-col gap-1">
+                            <Text>{ LocalizeText('widget.memenu.settings.volume.furni') }</Text>
+                            <div className="flex items-center gap-1">
+                                { (userSettings.volumeFurni === 0) && <FaVolumeMute className={ classNames((userSettings.volumeFurni >= 50) && 'text-muted', 'fa-icon') } /> }
+                                { (userSettings.volumeFurni > 0) && <FaVolumeDown className={ classNames((userSettings.volumeFurni >= 50) && 'text-muted', 'fa-icon') } /> }
+                                <input className="custom-range w-full" id="volumeFurni" max="100" min="0" step="1" type="range" value={ userSettings.volumeFurni } onChange={ event => processAction('furni_volume', event.target.value) } onMouseUp={ () => saveRangeSlider('volume') } />
+                                <FaVolumeUp className={ classNames((userSettings.volumeFurni < 50) && 'text-muted', 'fa-icon') } />
+                            </div>
+                        </div>
+                        <div className="flex flex-col gap-1">
+                            <Text>{ LocalizeText('widget.memenu.settings.volume.trax') }</Text>
+                            <div className="flex items-center gap-1">
+                                { (userSettings.volumeTrax === 0) && <FaVolumeMute className={ classNames((userSettings.volumeTrax >= 50) && 'text-muted', 'fa-icon') } /> }
+                                { (userSettings.volumeTrax > 0) && <FaVolumeDown className={ classNames((userSettings.volumeTrax >= 50) && 'text-muted', 'fa-icon') } /> }
+                                <input className="custom-range w-full" id="volumeTrax" max="100" min="0" step="1" type="range" value={ userSettings.volumeTrax } onChange={ event => processAction('trax_volume', event.target.value) } onMouseUp={ () => saveRangeSlider('volume') } />
+                                <FaVolumeUp className={ classNames((userSettings.volumeTrax < 50) && 'text-muted', 'fa-icon') } />
+                            </div>
+                        </div>
+                        <SoundboardVolumeControl
+                            value={ userSettings.volumeSoundboard }
+                            onChange={ value => processAction('soundboard_volume', value) }
+                            onCommit={ () => saveRangeSlider('soundboard_volume') } />
+                    </div> }
+                { showAccountLink &&
+                    <div className="flex flex-col pt-2 mt-1 border-t border-black/10">
+                        <button
+                            type="button"
+                            onClick={ () => CreateLinkEvent('user-account-settings/show') }
+                            className="group flex items-center gap-2 rounded-md border border-black/10 bg-white px-2 py-1.5 hover:bg-[#f5fbfd] hover:border-[#418db0] transition-colors cursor-pointer text-left">
+                            <div className="flex items-center justify-center w-7 h-7 rounded-full bg-[#418db0] text-white shadow-[inset_0_2px_#ffffff26,inset_0_-2px_#0000001a]">
+                                <FaUserCog size={ 12 } />
+                            </div>
+                            <div className="flex flex-col flex-1 leading-tight">
+                                <Text bold>{ localizeWithFallback('usersettings.open.title', "User Settings") }</Text>
+                                <Text small className="text-black/60">{ localizeWithFallback('usersettings.open.subtitle', "Password and account") }</Text>
+                            </div>
+                            <span className="text-black/30 group-hover:text-[#418db0] text-[10px]">›</span>
+                        </button>
+                    </div> }
+                { (section !== null) &&
+                    <div className="flex pt-2 mt-1 border-t border-black/10">
+                        <Button variant="secondary" onClick={ event => processAction('close_view') }>{ localizeWithFallback('generic.back', 'Indietro') }</Button>
+                    </div> }
+            </NitroCardContentView>
+        </NitroCardView>
     );
-}
+};

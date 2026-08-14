@@ -1,0 +1,828 @@
+.nitro-room-widgets {
+    pointer-events: none;
+}
+
+.no-resize {
+    resize: none !important;
+    min-width: 340px !important;
+    max-width: 340px !important;
+    min-height: 430px !important;
+    max-height: 430px !important;
+}
+
+.nitro-widget-custom-stack-height {
+    width: 275px;
+    height: 220px;
+}
+
+.nitro-room-widget-toner {
+    width: 190px;
+}
+
+.nitro-room-widget-background-color {
+    width: 314px;
+
+    .bgcolor-widget-content {
+        gap: 10px;
+        padding: 8px;
+    }
+
+    .bgcolor-widget-panel {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        min-height: 154px;
+        padding: 10px;
+        border: 1px solid #9c9c9c;
+        border-radius: 2px;
+        background: #f3f3f1;
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+    }
+
+    .bgcolor-widget-top {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 12px;
+    }
+
+    .bgcolor-widget-info {
+        color: #111;
+        font-size: 12px;
+        line-height: 1.2;
+    }
+
+    .bgcolor-widget-preview {
+        flex-shrink: 0;
+        width: 32px;
+        height: 32px;
+        border: 1px solid #b4b4a3;
+        background: #c8ce8c;
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+    }
+
+    .bgcolor-widget-slider-group {
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+    }
+
+    .bgcolor-widget-label {
+        color: #000;
+        font-size: 12px;
+        line-height: 1;
+    }
+
+    .bgcolor-widget-slider-shell {
+        position: relative;
+        width: 100%;
+        padding: 2px 0;
+    }
+
+    .bgcolor-widget-slider-shell::before {
+        content: '';
+        position: absolute;
+        left: 4px;
+        right: 4px;
+        top: 50%;
+        height: 8px;
+        transform: translateY(-50%);
+        background:
+            repeating-linear-gradient(
+                to right,
+                transparent 0 9px,
+                #1a1a1a 9px 10px
+            );
+        opacity: 0.75;
+        pointer-events: none;
+    }
+
+    .bgcolor-widget-slider-shell .nitro-slider-wrapper {
+        position: relative;
+        z-index: 1;
+        gap: 0;
+    }
+
+    .bgcolor-widget-slider-shell .nitro-slider {
+        height: 16px;
+    }
+
+    .bgcolor-widget-slider-track {
+        height: 2px !important;
+        border: 0 !important;
+        border-radius: 999px;
+        box-shadow: none !important;
+
+        &.track-0,
+        &.track-1 {
+            background: #000 !important;
+        }
+    }
+
+    .bgcolor-widget-slider-thumb {
+        width: 11px !important;
+        height: 18px !important;
+        margin-top: -1px;
+        border-radius: 4px !important;
+        border: 1px solid #345b72 !important;
+        background: linear-gradient(180deg, #6ba7c7 0%, #4a87a9 100%) !important;
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55), 0 1px 0 rgba(0, 0, 0, 0.25);
+        cursor: pointer;
+    }
+
+    .bgcolor-widget-actions {
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+    }
+
+    .bgcolor-widget-button {
+        min-width: 74px;
+        color: #000 !important;
+        border-color: #7f7f7f !important;
+        background: linear-gradient(180deg, #f7f7f7 0%, #d9d9d9 100%) !important;
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.95), 0 1px 0 rgba(0, 0, 0, 0.15) !important;
+    }
+
+    .bgcolor-widget-button:hover {
+        background: linear-gradient(180deg, #ffffff 0%, #e6e6e6 100%) !important;
+        border-color: #767676 !important;
+    }
+}
+
+.nitro-room-widget-dimmer {
+    width: min(275px, calc(100vw - 16px));
+    min-width: 0;
+    max-width: calc(100vw - 16px);
+    max-height: calc(100vh - 16px);
+
+    .dimmer-banner {
+        width: 56px;
+        height: 79px;
+        background: url('@/assets/images/room-widgets/dimmer-widget/dimmer_banner.png')
+            center no-repeat;
+    }
+
+    .color-swatch {
+        height: 30px;
+        border: 2px solid #FFF;
+        box-shadow: inset 3px 3px rgba(0, 0, 0, 0.2);
+
+        &.active {
+            box-shadow: none;
+        }
+    }
+}
+
+.nitro-widget-crafting {
+    width: min(500px, calc(100vw - 16px));
+    min-width: 0;
+    max-width: calc(100vw - 16px);
+    height: min(300px, calc(100vh - 16px));
+    min-height: 0;
+    max-height: calc(100vh - 16px);
+
+    .crafting-widget-layout {
+        min-height: 0;
+    }
+
+    .crafting-widget-pane {
+        flex: 1 1 0;
+    }
+}
+
+.nitro-widget-exchange-credit {
+    width: min(375px, calc(100vw - 16px));
+    min-width: 0;
+    max-width: calc(100vw - 16px);
+    height: min(150px, calc(100vh - 16px));
+    min-height: 0;
+    max-height: calc(100vh - 16px);
+
+    .exchange-image {
+        background-image: url('@/assets/images/room-widgets/exchange-credit/exchange-credit-image.png');
+        width: 103px;
+        height: 103px;
+    }
+}
+
+.nitro-external-image-widget {
+    width: min(340px, calc(100vw - 16px));
+    min-width: 0;
+    max-width: calc(100vw - 16px);
+    max-height: calc(100vh - 16px);
+
+    .picture-preview {
+        width: min(320px, calc(100vw - 36px));
+        height: auto;
+        aspect-ratio: 1;
+    }
+    
+    .picture-preview-buttons {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        color: gray;
+    }
+
+    .picture-preview-buttons-previous,
+    .picture-preview-buttons-next {
+        color: #222;
+        padding: 10px;
+        border-radius: 50%;
+    }
+}
+
+.nitro-gift-opening {
+    width: min(340px, calc(100vw - 16px));
+    min-width: 0;
+    max-width: calc(100vw - 16px);
+    max-height: calc(100vh - 16px);
+    resize: none;
+}
+
+.nitro-mannequin {
+    width: 300px;
+
+    .mannequin-preview {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        width: 83px;
+        height: 130px;
+        background-image: url('@/assets/images/room-widgets/mannequin-widget/mannequin-spritesheet.png');
+        overflow: hidden;
+
+        .avatar-image {
+            background-position: unset;
+            top: -8px;
+        }
+    }
+}
+
+.nitro-stickie {
+    position: relative;
+    width: 185px;
+    height: 178px;
+    top: 25px;
+    left: 25px;
+    padding: 1px;
+    pointer-events: all;
+
+    &.stickie-plain {
+        filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.3)) drop-shadow(2px 4px 4px rgba(0, 0, 0, 0.25));
+
+        &::before {
+            content: '';
+            position: absolute;
+            z-index: -1;
+            inset: 0;
+            border: 1px solid rgba(0, 0, 0, 0.15);
+            border-radius: 2px;
+            background-color: var(--stickie-color);
+            background-image:
+                linear-gradient(180deg, rgba(0, 0, 0, 0.07) 0, rgba(0, 0, 0, 0.07) 18px, rgba(255, 255, 255, 0.18) 19px, rgba(255, 255, 255, 0) 32px),
+                linear-gradient(180deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0) 45%, rgba(0, 0, 0, 0.05) 100%);
+            clip-path: polygon(0 0, 100% 0, 100% calc(100% - 22px), calc(100% - 22px) 100%, 0 100%);
+        }
+
+        &::after {
+            content: '';
+            position: absolute;
+            right: 0;
+            bottom: 0;
+            width: 22px;
+            height: 22px;
+            background-color: var(--stickie-color);
+            background-image: linear-gradient(to top left, rgba(0, 0, 0, 0.3) 0%, rgba(0, 0, 0, 0.12) 45%, rgba(255, 255, 255, 0.2) 100%);
+            clip-path: polygon(0 0, 100% 0, 0 100%);
+        }
+
+        .stickie-context {
+            font-family: 'Segoe Print', 'Bradley Hand', 'Lucida Handwriting', 'Comic Sans MS', cursive;
+            line-height: 1.4;
+
+            textarea {
+                font-style: normal;
+            }
+        }
+    }
+
+    .stickie-header {
+        width: 183px;
+        height: 18px;
+        padding: 0 7px;
+
+        .header-trash,
+        .header-close {
+            cursor: pointer;
+        }
+
+        .stickie-color {
+            width: 10px;
+            height: 10px;
+            cursor: pointer;
+            border: 1px solid rgba(0, 0, 0, 0.4);
+        }
+    }
+
+    .stickie-context {
+        width: 183px;
+        height: 145px;
+        padding: 2px 7px;
+        font-size: 12px;
+        color: #000;
+
+        .context-text {
+            width: 100%;
+            height: 100%;
+            padding: 0;
+            overflow-wrap: break-word;
+            white-space: break-spaces;
+            overflow-y: auto;
+        }
+
+        textarea {
+            background: transparent;
+            border: 0;
+            outline: none;
+            box-shadow: none;
+            resize: none;
+            font-family: inherit;
+            font-size: inherit;
+            font-style: italic;
+
+            &:active {
+                border: 0;
+                outline: none;
+                box-shadow: none;
+            }
+        }
+    }
+}
+
+.nitro-stickie-image {
+    &.stickie-christmas {
+        background-image: url('@/assets/images/room-widgets/stickie-widget/stickie-christmas.png');
+    }
+
+    &.stickie-shakesp {
+        background-image: url('@/assets/images/room-widgets/stickie-widget/stickie-shakesp.png');
+    }
+
+    &.stickie-dreams {
+        background-image: url('@/assets/images/room-widgets/stickie-widget/stickie-dreams.png');
+    }
+
+    &.stickie-heart {
+        background-image: url('@/assets/images/room-widgets/stickie-widget/stickie-heart.png');
+    }
+
+    &.stickie-juninas {
+        background-image: url('@/assets/images/room-widgets/stickie-widget/stickie-juninas.png');
+    }
+
+    &.stickie-close {
+        width: 10px;
+        height: 10px;
+        background-image: url('@/assets/images/room-widgets/stickie-widget/stickie-close.png');
+    }
+
+    &.stickie-trash {
+        width: 9px;
+        height: 10px;
+        background-image: url('@/assets/images/room-widgets/stickie-widget/stickie-trash.png');
+    }
+}
+
+.nitro-engraving-lock {
+    width: 300px;
+
+    .engraving-lock-stage-1 {
+        width: 31px;
+        height: 39px;
+        background-position: -380px -43px;
+        background-image: url('@/assets/images/room-widgets/engraving-lock-widget/engraving-lock-spritesheet.png');
+    }
+
+    .engraving-lock-stage-2 {
+        width: 36px;
+        height: 43px;
+        background-position: -375px 0px;
+        background-image: url('@/assets/images/room-widgets/engraving-lock-widget/engraving-lock-spritesheet.png');
+    }
+}
+
+/* lovelock_engraving_xml.xml — 375×210, absolute layout */
+.nitro-engraving-lock-view {
+    position: relative;
+    width: 375px;
+    height: 210px;
+    background-image: url('@/assets/images/room-widgets/engraving-lock-widget/engraving-lock-spritesheet.png');
+    background-position: 0 0;
+    background-repeat: no-repeat;
+    background-size: 411px 630px;
+    image-rendering: pixelated;
+    color: #59224a;
+    font-family: UbuntuCondensed, Ubuntu, sans-serif;
+    font-weight: 700;
+    font-size: 12px;
+    line-height: 17px;
+    text-shadow: 0 1px 0 #ffffff;
+    user-select: none;
+}
+
+.nitro-engraving-lock-view.engraving-lock-3 {
+    background-position: 0 -210px;
+    color: #614110;
+}
+
+.nitro-engraving-lock-view.engraving-lock-4 {
+    background-position: 0 -420px;
+    color: #f1dcc8;
+    text-shadow: 0 1px 0 rgba(0, 0, 0, 0.35);
+}
+
+.nitro-engraving-lock-view .engraving-lock-close {
+    position: absolute;
+    top: 33px;
+    right: 24px;
+    width: 21px;
+    height: 17px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+}
+
+.nitro-engraving-lock-view .engraving-lock-avatar {
+    position: absolute;
+    top: 7px;
+    width: 70px;
+    height: 115px;
+    overflow: hidden;
+    pointer-events: none;
+}
+
+.nitro-engraving-lock-view .engraving-lock-avatar .avatar-image {
+    position: absolute !important;
+    top: auto !important;
+    bottom: 0 !important;
+    left: 50% !important;
+    width: 90px !important;
+    height: 130px !important;
+    margin: 0 !important;
+    transform: translateX(-50%) !important;
+    image-rendering: pixelated;
+}
+
+.nitro-engraving-lock-view .engraving-lock-avatar--left {
+    left: 115px;
+}
+
+.nitro-engraving-lock-view .engraving-lock-avatar--right {
+    left: 186px;
+}
+
+.nitro-engraving-lock-view .engraving-lock-header,
+.nitro-engraving-lock-view .engraving-lock-date,
+.nitro-engraving-lock-view .engraving-lock-name {
+    position: absolute;
+    display: block;
+    height: 17px;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    box-sizing: border-box;
+}
+
+.nitro-engraving-lock-view .engraving-lock-header {
+    top: 126px;
+    left: 82px;
+    width: 217px;
+    text-align: center;
+}
+
+.nitro-engraving-lock-view .engraving-lock-date {
+    top: 151px;
+    left: 143px;
+    width: 97px;
+    text-align: center;
+}
+
+.nitro-engraving-lock-view .engraving-lock-name {
+    top: 175px;
+}
+
+.nitro-engraving-lock-view .engraving-lock-name--left {
+    left: 19px;
+    width: 150px;
+    text-align: right;
+}
+
+.nitro-engraving-lock-view .engraving-lock-name--right {
+    left: 199px;
+    width: 87px;
+    text-align: left;
+}
+
+.nitro-widget-high-score {
+    border-radius: 0.3rem;
+    border: solid 1px #000;
+
+    .header {
+        border-image-source: none !important;
+        background-color: #40403e;
+        border-radius: 0.3rem 0.3rem 0 0;
+    }
+
+    .align-right {
+        text-align: right;
+    }
+
+    .section-border {
+        border: solid 1px #8c8a88;
+    }
+
+    .high-score-content {
+        height: 100%;
+        background-color: #000;
+        border-radius: 0.3rem;
+    }
+
+    .score-footer {
+        color: #9a9896;
+        font-weight: bold;
+    }
+}
+
+.youtube-tv-widget {
+    width: 600px;
+    height: 380px;
+
+    .youtube-video-container {
+        .empty-video {
+            background-color: black;
+            color: white;
+            width: 100%;
+            height: 100%;
+            text-align: center;
+        }
+
+        .youtubeContainer {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            margin-bottom: 50px;
+        }
+
+        .youtubeContainer iframe {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+    }
+
+    .playlist-container {
+        overflow-y: auto;
+        margin-right: -10px;
+        color: black;
+        height: 100%;
+
+        .playlist-controls {
+            width: 100%;
+            .icon {
+                margin-right: 10px;
+                margin-bottom: 10px;
+            }
+        }
+
+        .playlist-grid {
+            height: 100%;
+            width: 100%;
+        }
+    }
+}
+
+.nitro-playlist-editor-widget {
+    width: min(625px, calc(100vw - 16px));
+    min-width: 0;
+    max-width: calc(100vw - 16px);
+    height: min(440px, calc(100vh - 16px));
+    min-height: 0;
+    max-height: calc(100vh - 16px);
+
+    .playlist-editor-layout {
+        min-height: 0;
+    }
+
+    .playlist-editor-pane {
+        flex: 1 1 0;
+    }
+
+    img.my-music {
+        position: absolute;
+        top: -4px;
+        left: -4px;
+        z-index: 0;
+    }
+
+    img.playlist-img {
+        position: absolute;
+        top: -4px;
+        left: 0;
+        z-index: 0;
+    }
+
+    img.get-more,
+    img.add-songs {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        z-index: 0;
+    }
+
+    .playlist-bottom {
+        z-index: 3;
+    }
+
+    .move-disk {
+        width: 22px;
+        height: 18px;
+        background-image: url('@/assets/images/room-widgets/playlist-editor/move.png');
+    }
+
+    .disk-2,
+    .disk-image {
+        background-blend-mode: multiply;
+    }
+
+    .disk-2 {
+        width: 38px;
+        height: 38px;
+        background-image: url('@/assets/images/room-widgets/playlist-editor/disk_2.png');
+        background-position: center;
+        background-repeat: no-repeat;
+
+        &.playing-song {
+            background-image: url('@/assets/images/room-widgets/playlist-editor/playing.png');
+        }
+
+        &.selected-song {
+            background-image: url('@/assets/images/room-widgets/playlist-editor/move.png');
+            transform: scaleX(-1);
+        }
+
+        &:not(.playing-song):not(.selected-song) {
+            -webkit-mask-image: url('@/assets/images/room-widgets/playlist-editor/disk_2.png');
+            mask-image: url('@/assets/images/room-widgets/playlist-editor/disk_2.png');
+        }
+    }
+
+    .pause-song {
+        width: 18px;
+        height: 20px;
+        background-image: url('@/assets/images/room-widgets/playlist-editor/pause.png');
+    }
+
+    .pause-btn {
+        width: 16px;
+        height: 16px;
+
+        background-image: url('@/assets/images/room-widgets/playlist-editor/pause-btn.png');
+    }
+
+    .music-note {
+        width: 38px;
+        height: 38px;
+        background-image: url('@/assets/images/room-widgets/playlist-editor/playing.png');
+    }
+
+    .preview-song {
+        width: 16px;
+        height: 16px;
+        background-image: url('@/assets/images/room-widgets/playlist-editor/preview.png');
+    }
+
+    .layout-grid-item {
+        min-height: 106px;
+        min-width: 95px;
+        position: relative;
+
+        .disk-image {
+            background: url('@/assets/images/room-widgets/playlist-editor/disk_image.png');
+            -webkit-mask-image: url('@/assets/images/room-widgets/playlist-editor/disk_image.png');
+            mask-image: url('@/assets/images/room-widgets/playlist-editor/disk_image.png');
+            height: 76px;
+            width: 76px;
+        }
+    }
+}
+
+@media (max-width: 640px), (max-height: 520px) {
+    .nitro-playlist-editor-widget {
+        .playlist-editor-layout {
+            flex-direction: column;
+        }
+
+        .playlist-editor-pane {
+            width: 100%;
+            min-height: 0;
+        }
+    }
+}
+
+.nitro-mysterybox-dialog {
+    width: min(375px, calc(100vw - 16px));
+    min-width: 0;
+    max-width: calc(100vw - 16px);
+    height: min(210px, calc(100vh - 16px));
+    min-height: 0;
+    max-height: calc(100vh - 16px);
+
+    .prize-container {
+        height: 80px;
+        width: 81px;
+        background-image: url('@/assets/images/prize/prize_background.png');
+        background-repeat: no-repeat;
+        background-position: center;
+    }
+}
+
+.nitro-mysterytrophy-dialog {
+    .mysterytrophy-dialog-top {
+        width: 100%;
+        min-height: 120px;
+        border-radius: 2px;
+        background-color: #0E3F52;
+
+        .mysterytrophy-image {
+            width: 80px;
+            height: 84px;
+            position: relative;
+            background-image: url('@/assets/images/mysterytrophy/frank_mystery_trophy.png');
+            background-repeat: no-repeat;
+        }
+
+        .mysterytrophy-text-big {
+            font-size: 16px;
+        }
+    }
+
+    .mysterytrophy-dialog-bottom {
+        display: flex;
+        justify-content: center;
+        width: 100%;
+        min-height: 120px;
+        border-radius: 2px;
+        background-color: #E9E9E1;
+
+        .input-mysterytrophy-dialog {
+            width: min(380px, 100%);
+            min-width: 0;
+            border: 1px solid black;
+
+            .input-mysterytrophy {
+                width: 100%;
+                min-width: 0;
+                border: 0;
+                outline: 0;
+            }
+
+            .mysterytrophy-pencil-image {
+                width: 16px;
+                height: 16px;
+                position: relative;
+                background-image: url('@/assets/images/infostand/pencil-icon.png');
+                background-repeat: no-repeat;
+            }
+        }
+
+        .text-decoration {
+            text-decoration: underline;
+        }
+    }
+}
+
+@media (max-width: 560px), (max-height: 460px) {
+    .nitro-widget-crafting {
+        .crafting-widget-layout {
+            flex-direction: column;
+            overflow: auto;
+        }
+
+        .crafting-widget-pane {
+            width: 100%;
+            min-height: 0;
+        }
+    }
+
+    .nitro-widget-exchange-credit {
+        height: auto;
+    }
+}

@@ -1,132 +1,187 @@
-import { DesktopViewEvent, GetGuestRoomResultEvent, GroupInformationComposer, GroupInformationEvent, GroupInformationParser, GroupRemoveMemberComposer, HabboGroupDeactivatedMessageEvent, RoomEntryInfoMessageEvent } from '@nitrots/nitro-renderer';
-import { FC, useState } from 'react';
-import { FaChevronDown, FaChevronUp } from 'react-icons/fa';
-import { GetGroupInformation, GetGroupManager, GetSessionDataManager, GroupMembershipType, GroupType, LocalizeText, SendMessageComposer, TryJoinGroup } from '../../../api';
-import { Base, Button, Column, Flex, LayoutBadgeImageView, Text } from '../../../common';
+import {
+    DesktopViewEvent,
+    GetGuestRoomResultEvent,
+    GetSessionDataManager,
+    GroupInformationComposer,
+    GroupInformationEvent,
+    GroupInformationParser,
+    GroupRemoveMemberComposer,
+    HabboGroupDeactivatedMessageEvent,
+    RoomEntryInfoMessageEvent
+} from '@nitrots/nitro-renderer';
+import { FC, useEffect, useRef, useState } from 'react';
+import { GetGroupInformation, GetGroupManager, GroupMembershipType, GroupType, LocalizeText, SendMessageComposer, TryJoinGroup } from '../../../api';
+import groupBaseIcon from '../../../assets/images/groups/swf/group_base_icon.png';
+import { Button, Flex, LayoutBadgeImageView, Text } from '../../../common';
 import { useMessageEvent, useNotification } from '../../../hooks';
 
-export const GroupRoomInformationView: FC<{}> = props =>
-{
-    const [ expectedGroupId, setExpectedGroupId ] = useState<number>(0);
-    const [ groupInformation, setGroupInformation ] = useState<GroupInformationParser>(null);
-    const [ isOpen, setIsOpen ] = useState<boolean>(true);
+export const GroupRoomInformationView: FC<{}> = (props) => {
+    const expectedGroupIdRef = useRef<number>(0);
+    const requestRetryCountRef = useRef<number>(0);
+    const requestRetryTimeoutRef = useRef<ReturnType<typeof setTimeout>>(null);
+    const [groupInformation, setGroupInformation] = useState<GroupInformationParser>(null);
+    const [isOpen, setIsOpen] = useState<boolean>(true);
     const { showConfirm = null } = useNotification();
 
-    useMessageEvent<DesktopViewEvent>(DesktopViewEvent, event =>
-    {
-        setExpectedGroupId(0);
+    const clearRequestRetryTimeout = () => {
+        if (!requestRetryTimeoutRef.current) return;
+
+        clearTimeout(requestRetryTimeoutRef.current);
+        requestRetryTimeoutRef.current = null;
+    };
+
+    const scheduleGroupInfoRetry = (groupId: number) => {
+        if (requestRetryCountRef.current >= 2) return;
+
+        clearRequestRetryTimeout();
+
+        requestRetryTimeoutRef.current = setTimeout(() => {
+            requestRetryTimeoutRef.current = null;
+
+            if (expectedGroupIdRef.current !== groupId) return;
+            if (groupInformation && groupInformation.id === groupId) return;
+
+            requestRetryCountRef.current++;
+            SendMessageComposer(new GroupInformationComposer(groupId, false));
+            scheduleGroupInfoRetry(groupId);
+        }, 700);
+    };
+
+    const requestGroupInformation = (groupId: number) => {
+        if (groupId <= 0) return;
+
+        requestRetryCountRef.current = 0;
+        clearRequestRetryTimeout();
+
+        SendMessageComposer(new GroupInformationComposer(groupId, false));
+        scheduleGroupInfoRetry(groupId);
+    };
+
+    const resetGroupState = () => {
+        expectedGroupIdRef.current = 0;
+        requestRetryCountRef.current = 0;
+        clearRequestRetryTimeout();
         setGroupInformation(null);
+    };
+
+    const setRequestedGroupId = (groupId: number) => {
+        expectedGroupIdRef.current = groupId;
+    };
+
+    useMessageEvent<DesktopViewEvent>(DesktopViewEvent, (event) => {
+        resetGroupState();
     });
 
-    useMessageEvent<RoomEntryInfoMessageEvent>(RoomEntryInfoMessageEvent, event =>
-    {
-        setExpectedGroupId(0);
-        setGroupInformation(null);
+    useMessageEvent<RoomEntryInfoMessageEvent>(RoomEntryInfoMessageEvent, (event) => {
+        resetGroupState();
     });
 
-    useMessageEvent<GetGuestRoomResultEvent>(GetGuestRoomResultEvent, event =>
-    {
+    useMessageEvent<GetGuestRoomResultEvent>(GetGuestRoomResultEvent, (event) => {
         const parser = event.getParser();
 
-        if(!parser.roomEnter) return;
+        if (!parser.roomEnter) return;
 
-        if(parser.data.habboGroupId > 0)
-        {
-            setExpectedGroupId(parser.data.habboGroupId);
-            SendMessageComposer(new GroupInformationComposer(parser.data.habboGroupId, false));
+        if (parser.data.habboGroupId > 0) {
+            setRequestedGroupId(parser.data.habboGroupId);
+            requestGroupInformation(parser.data.habboGroupId);
+        } else {
+            resetGroupState();
         }
-        else
-        {
-            setExpectedGroupId(0);
-            setGroupInformation(null);
-        }
     });
 
-    useMessageEvent<HabboGroupDeactivatedMessageEvent>(HabboGroupDeactivatedMessageEvent, event =>
-    {
+    useMessageEvent<HabboGroupDeactivatedMessageEvent>(HabboGroupDeactivatedMessageEvent, (event) => {
         const parser = event.getParser();
 
-        if(!groupInformation || ((parser.groupId !== groupInformation.id) && (parser.groupId !== expectedGroupId))) return;
+        if (!groupInformation || (parser.groupId !== groupInformation.id && parser.groupId !== expectedGroupIdRef.current)) return;
 
-        setExpectedGroupId(0);
-        setGroupInformation(null);
+        resetGroupState();
     });
 
-    useMessageEvent<GroupInformationEvent>(GroupInformationEvent, event =>
-    {
+    useMessageEvent<GroupInformationEvent>(GroupInformationEvent, (event) => {
         const parser = event.getParser();
 
-        if(parser.id !== expectedGroupId) return;
+        if (parser.id !== expectedGroupIdRef.current) return;
 
+        clearRequestRetryTimeout();
         setGroupInformation(parser);
     });
 
-    const leaveGroup = () =>
-    {
-        showConfirm(LocalizeText('group.leaveconfirm.desc'), () =>
-        {
-            SendMessageComposer(new GroupRemoveMemberComposer(groupInformation.id, GetSessionDataManager().userId));
-        }, null);
-    }
+    useEffect(() => () => clearRequestRetryTimeout(), []);
 
-    const isRealOwner = (groupInformation && (groupInformation.ownerName === GetSessionDataManager().userName));
+    const leaveGroup = () => {
+        showConfirm(
+            LocalizeText('group.leaveconfirm.desc'),
+            () => {
+                SendMessageComposer(new GroupRemoveMemberComposer(groupInformation.id, GetSessionDataManager().userId));
+            },
+            null
+        );
+    };
 
-    const getButtonText = () =>
-    {
-        if(isRealOwner) return 'group.manage';
+    const isRealOwner = groupInformation && groupInformation.ownerName === GetSessionDataManager().userName;
 
-        if(groupInformation.type === GroupType.PRIVATE) return '';
+    const getButtonText = () => {
+        if (isRealOwner) return 'group.manage';
 
-        if(groupInformation.membershipType === GroupMembershipType.MEMBER) return 'group.leave';
+        if (groupInformation.type === GroupType.PRIVATE) return '';
 
-        if((groupInformation.membershipType === GroupMembershipType.NOT_MEMBER) && groupInformation.type === GroupType.REGULAR) return 'group.join';
+        if (groupInformation.membershipType === GroupMembershipType.MEMBER) return 'group.leave';
 
-        if(groupInformation.membershipType === GroupMembershipType.REQUEST_PENDING) return 'group.membershippending';
+        if (groupInformation.membershipType === GroupMembershipType.NOT_MEMBER && groupInformation.type === GroupType.REGULAR) return 'group.join';
 
-        if((groupInformation.membershipType === GroupMembershipType.NOT_MEMBER) && groupInformation.type === GroupType.EXCLUSIVE) return 'group.requestmembership';
-    }
+        if (groupInformation.membershipType === GroupMembershipType.REQUEST_PENDING) return 'group.membershippending';
 
-    const handleButtonClick = () =>
-    {
-        if(isRealOwner) return GetGroupManager(groupInformation.id);
+        if (groupInformation.membershipType === GroupMembershipType.NOT_MEMBER && groupInformation.type === GroupType.EXCLUSIVE)
+            return 'group.requestmembership';
+    };
 
-        if((groupInformation.type === GroupType.PRIVATE) && (groupInformation.membershipType === GroupMembershipType.NOT_MEMBER)) return;
+    const handleButtonClick = () => {
+        if (isRealOwner) return GetGroupManager(groupInformation.id);
 
-        if(groupInformation.membershipType === GroupMembershipType.MEMBER)
-        {
+        if (groupInformation.type === GroupType.PRIVATE && groupInformation.membershipType === GroupMembershipType.NOT_MEMBER) return;
+
+        if (groupInformation.membershipType === GroupMembershipType.MEMBER) {
             leaveGroup();
 
             return;
         }
 
         TryJoinGroup(groupInformation.id);
-    }
+    };
 
-    if(!groupInformation) return null;
+    if (!groupInformation) return null;
 
     return (
-        <Base className="nitro-notification-bubble rounded">
-            <Column>
-                <Flex alignItems="center" justifyContent="between" pointer onClick={ event => setIsOpen(value => !value) }>
-                    <Text variant="white" small>{ LocalizeText('group.homeroominfo.title') }</Text>
-                    { isOpen && <FaChevronUp className="fa-icon" /> }
-                    { !isOpen && <FaChevronDown className="fa-icon" /> }
+        <div className={`nitro-group-room-info pointer-events-auto ml-auto mt-[6px] overflow-hidden ${isOpen ? 'is-open' : 'is-closed'}`}>
+            <div className="nitro-group-room-info__contracted" onClick={() => setIsOpen((value) => !value)}>
+                <img src={groupBaseIcon} alt="" className="nitro-group-room-info__base-icon" draggable={false} />
+                <Text variant="white" className="nitro-group-room-info__title">
+                    {LocalizeText('group.homeroominfo.title')}
+                </Text>
+                <span className="nitro-group-room-info__toggle" />
+            </div>
+            <div className="nitro-group-room-info__content">
+                <Flex pointer alignItems="center" className="nitro-group-room-info__main" onClick={() => GetGroupInformation(groupInformation.id)}>
+                    <div className="nitro-group-room-info__badge">
+                        <LayoutBadgeImageView badgeCode={groupInformation.badge} isGroup={true} />
+                    </div>
+                    <Text wrap variant="white" className="nitro-group-room-info__group-name">
+                        {groupInformation.title}
+                    </Text>
                 </Flex>
-                { isOpen &&
-                    <>
-                        <Flex pointer alignItems="center" gap={ 2 } onClick={ event => GetGroupInformation(groupInformation.id) }>
-                            <Base className="group-badge">
-                                <LayoutBadgeImageView badgeCode={ groupInformation.badge } isGroup={ true } />
-                            </Base>
-                            <Text variant="white" small>{ groupInformation.title }</Text>
-                        </Flex>
-                        { (groupInformation.type !== GroupType.PRIVATE || isRealOwner) && 
-                            <Button fullWidth variant="dark" size='sm' disabled={ (groupInformation.membershipType === GroupMembershipType.REQUEST_PENDING) } onClick={ handleButtonClick }>
-                                { LocalizeText(getButtonText()) }
-                            </Button>
-                        }
-                    </> }
-            </Column>
-        </Base>
+                {(groupInformation.type !== GroupType.PRIVATE || isRealOwner) && (
+                    <div className="nitro-group-room-info__button-wrap">
+                        <Button
+                            fullWidth
+                            disabled={groupInformation.membershipType === GroupMembershipType.REQUEST_PENDING}
+                            className="nitro-groups-button nitro-group-room-info__button"
+                            onClick={handleButtonClick}
+                        >
+                            {LocalizeText(getButtonText())}
+                        </Button>
+                    </div>
+                )}
+            </div>
+        </div>
     );
 };

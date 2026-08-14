@@ -1,32 +1,31 @@
 import { FC, MouseEvent, useMemo } from 'react';
 import { Flex, FlexProps } from '../../../../common';
 
-interface ContextMenuListItemViewProps extends FlexProps
-{
+interface ContextMenuListItemViewProps extends FlexProps {
     disabled?: boolean;
 }
 
-export const ContextMenuListItemView: FC<ContextMenuListItemViewProps> = props =>
-{
+export const ContextMenuListItemView: FC<ContextMenuListItemViewProps> = (props) => {
     const { disabled = false, fullWidth = true, justifyContent = 'center', alignItems = 'center', classNames = [], onClick = null, ...rest } = props;
 
-    const handleClick = (event: MouseEvent<HTMLDivElement>) =>
-    {
-        if(disabled) return;
+    const handleClick = (event: MouseEvent<HTMLDivElement>) => {
+        if (disabled) return;
 
-        if(onClick) onClick(event);
-    }
+        if (onClick) onClick(event);
+    };
 
-    const getClassNames = useMemo(() =>
-    {
-        const newClassNames: string[] = [ 'menu-item', 'list-item' ];
+    const getClassNames = useMemo(() => {
+        const newClassNames: string[] = [
+            'nitro-context-menu-item',
+            'cursor-pointer'
+        ];
 
-        if(disabled) newClassNames.push('disabled');
+        if (disabled) newClassNames.push('disabled');
 
-        if(classNames.length) newClassNames.push(...classNames);
+        if (classNames.length) newClassNames.push(...classNames);
 
         return newClassNames;
-    }, [ disabled, classNames ]);
+    }, [disabled, classNames]);
 
-    return <Flex fullWidth={ fullWidth } justifyContent={ justifyContent } alignItems={ alignItems } classNames={ getClassNames } onClick={ handleClick } { ...rest } />;
-}
+    return <Flex alignItems={alignItems} classNames={getClassNames} fullWidth={fullWidth} justifyContent={justifyContent} onClick={handleClick} {...rest} />;
+};

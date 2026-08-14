@@ -1,199 +1,321 @@
-import { ILinkEventTracker, RemoveFriendComposer, SendRoomInviteComposer } from '@nitrots/nitro-renderer';
+import { AddLinkEventTracker, ILinkEventTracker, RemoveFriendComposer, RemoveLinkEventTracker, SendRoomInviteComposer } from '@nitrots/nitro-renderer';
 import { FC, useCallback, useEffect, useMemo, useState } from 'react';
-import { AddEventLinkTracker, LocalizeText, MessengerFriend, RemoveLinkEventTracker, SendMessageComposer } from '../../../../api';
-import { Flex, NitroCardContentView, NitroCardHeaderView, NitroCardTabsItemView, NitroCardTabsView, NitroCardView } from '../../../../common';
+import { CreateLinkEvent, filterFriendsByCategory, LocalizeText, MessengerFriend, SendMessageComposer } from '../../../../api';
+import { DraggableWindow, DraggableWindowPosition } from '../../../../common';
 import { useFriends } from '../../../../hooks';
+import './FriendsListView.css';
 import { FriendsRemoveConfirmationView } from './FriendsListRemoveConfirmationView';
 import { FriendsRoomInviteView } from './FriendsListRoomInviteView';
 import { FriendsSearchView } from './FriendsListSearchView';
 import { FriendsListGroupView } from './friends-list-group/FriendsListGroupView';
-import { FriendsListGroupOfflineView } from './friends-list-group/FriendsListGroupViewOffline';
 import { FriendsListRequestView } from './friends-list-request/FriendsListRequestView';
 
-export const FriendsListView: FC<{}> = props =>
-{
+export const FriendsListView: FC<{}> = (props) => {
     const [isVisible, setIsVisible] = useState(false);
-    const [section, setSection] = useState("online");
     const [selectedFriendsIds, setSelectedFriendsIds] = useState<number[]>([]);
-    const [showRoomInvite, setShowRoomInvite] = useState(false);
-    const [showRemoveFriendsConfirmation, setShowRemoveFriendsConfirmation] = useState(false);
-	
+    const [showRoomInvite, setShowRoomInvite] = useState<boolean>(false);
+    const [showRemoveFriendsConfirmation, setShowRemoveFriendsConfirmation] = useState<boolean>(false);
+    const [activePanel, setActivePanel] = useState<'friends' | 'requests' | 'search' | null>('friends');
+    const [isFriendSearchOpen, setIsFriendSearchOpen] = useState(false);
+    const [friendSearchValue, setFriendSearchValue] = useState('');
+    const [isOnlineExpanded, setIsOnlineExpanded] = useState<boolean>(true);
+    const [isOfflineExpanded, setIsOfflineExpanded] = useState<boolean>(false);
     const { onlineFriends = [], offlineFriends = [], requests = [], requestFriend = null, requestResponse = null } = useFriends();
 
-    const removeFriendsText = useMemo(() =>
-    {
-        if (!selectedFriendsIds.length) return '';
+    const friendSearch = friendSearchValue.trim().toLocaleLowerCase();
+    const filteredOnlineFriends = filterFriendsByCategory(onlineFriends, 0).filter(
+        (friend) => !friendSearch || friend.name.toLocaleLowerCase().includes(friendSearch)
+    );
+    const filteredOfflineFriends = filterFriendsByCategory(offlineFriends, 0).filter(
+        (friend) => !friendSearch || friend.name.toLocaleLowerCase().includes(friendSearch)
+    );
 
-        const userNames = selectedFriendsIds
-            .map(userId => onlineFriends.find(f => f.id === userId) || offlineFriends.find(f => f.id === userId))
-            .filter(friend => friend)
-            .map(friend => friend.name);
+    const removeFriendsText = useMemo(() => {
+        if (!selectedFriendsIds || !selectedFriendsIds.length) return '';
 
-        return LocalizeText('friendlist.removefriendconfirm.userlist', ['user_names'], [userNames.join(', ')]);
+        const userNames: string[] = [];
+
+        for (const userId of selectedFriendsIds) {
+            let existingFriend: MessengerFriend = onlineFriends.find((f) => f.id === userId);
+
+            if (!existingFriend) existingFriend = offlineFriends.find((f) => f.id === userId);
+
+            if (!existingFriend) continue;
+
+            userNames.push(existingFriend.name);
+        }
+
+        return LocalizeText('friendlist.removefriendconfirm.userlist', ['user_names'], [userNames.join('\n')]);
     }, [offlineFriends, onlineFriends, selectedFriendsIds]);
 
-    const selectFriend = useCallback((userId: number) =>
-    {
-        if (userId < 0) return;
+    const selectFriend = useCallback(
+        (userId: number) => {
+            if (userId < 0) return;
 
-        setSelectedFriendsIds(prevValue =>
-        {
-            const newValue = [...prevValue];
-            const index = newValue.indexOf(userId);
+            setSelectedFriendsIds((prevValue) => {
+                const newValue = [...prevValue];
 
-            if (index > -1) newValue.splice(index, 1);
-            else newValue.push(userId);
+                const existingUserIdIndex: number = newValue.indexOf(userId);
 
-            return newValue;
+                if (existingUserIdIndex > -1) {
+                    newValue.splice(existingUserIdIndex, 1);
+                } else {
+                    newValue.push(userId);
+                }
+
+                return newValue;
+            });
+        },
+        [setSelectedFriendsIds]
+    );
+
+    const toggleSelectFriends = useCallback((friendIds: number[]) => {
+        if (!friendIds.length) return;
+
+        setSelectedFriendsIds((prevValue) => {
+            const allSelected = friendIds.every((friendId) => prevValue.indexOf(friendId) >= 0);
+
+            if (allSelected) return prevValue.filter((friendId) => friendIds.indexOf(friendId) === -1);
+
+            const nextValue = [...prevValue];
+
+            for (const friendId of friendIds) {
+                if (nextValue.indexOf(friendId) === -1) nextValue.push(friendId);
+            }
+
+            return nextValue;
         });
     }, []);
 
-    const sendRoomInvite = useCallback((message: string) =>
-    {
-        if (!selectedFriendsIds.length || !message || message.length > 255) return;
+    const sendRoomInvite = (message: string) => {
+        if (!selectedFriendsIds.length || !message || !message.length || message.length > 255) return;
 
         SendMessageComposer(new SendRoomInviteComposer(message, selectedFriendsIds));
+
         setShowRoomInvite(false);
-    }, [selectedFriendsIds]);
+    };
 
-    const removeSelectedFriends = useCallback(() =>
-    {
-        if (!selectedFriendsIds.length) return;
+    const removeSelectedFriends = () => {
+        if (selectedFriendsIds.length === 0) return;
 
-        SendMessageComposer(new RemoveFriendComposer(...selectedFriendsIds));
-        setSelectedFriendsIds([]);
+        setSelectedFriendsIds((prevValue) => {
+            SendMessageComposer(new RemoveFriendComposer(...prevValue));
+
+            return [];
+        });
+
         setShowRemoveFriendsConfirmation(false);
-    }, [selectedFriendsIds]);
+    };
 
-    useEffect(() =>
-    {
+    useEffect(() => {
         const linkTracker: ILinkEventTracker = {
-            linkReceived: (url: string) =>
-            {
-                const [prefix, command, id, name] = url.split('/');
+            linkReceived: (url: string) => {
+                const parts = url.split('/');
 
-                switch (command)
-                {
+                if (parts.length < 2) return;
+
+                switch (parts[1]) {
                     case 'show':
                         setIsVisible(true);
-                        break;
+                        return;
                     case 'hide':
                         setIsVisible(false);
-                        break;
+                        return;
                     case 'toggle':
-                        setIsVisible(prevValue => !prevValue);
-                        break;
+                        setIsVisible((prevValue) => !prevValue);
+                        return;
                     case 'request':
-                        if (id && name) requestFriend(parseInt(id), name);
-                        break;
-                    default:
-                        break;
+                        if (parts.length < 4) return;
+
+                        requestFriend(parseInt(parts[2]), parts[3]);
                 }
             },
             eventUrlPrefix: 'friends/'
         };
 
-        AddEventLinkTracker(linkTracker);
+        AddLinkEventTracker(linkTracker);
 
         return () => RemoveLinkEventTracker(linkTracker);
     }, [requestFriend]);
 
+    useEffect(() => {
+        if (activePanel === 'requests' && !requests.length) setActivePanel('friends');
+    }, [activePanel, requests.length]);
+
     if (!isVisible) return null;
 
-    const renderSection = () => {
-        switch (section) {
-            case 'online':
-                return (
-                    <div style={{ overflow: "auto" }}>
-                        <div className="row mt-1 gx-1" style={{ marginLeft: "0px", marginRight: "0px", padding: "4px" }}>
-                            <div className='col-md-6'>
-                                <button 
-                                    onClick={() => setShowRoomInvite(true)} 
-                                    disabled={!selectedFriendsIds.length} 
-                                    className='btn w-100' 
-                                    style={{ backgroundColor: "var(--colors-secondary)" }}>
-                                    {LocalizeText('friendlist.tip.invite')}
-                                </button>
-                            </div>
-                            <div className='col-md-6'>
-                                <button 
-                                    onClick={() => setShowRemoveFriendsConfirmation(true)} 
-                                    disabled={!selectedFriendsIds.length} 
-                                    className='btn w-100 btn-danger'>
-                                    {LocalizeText('friendlist.tip.remove')}
-                                </button>
-                            </div>
-                        </div>
-                        <FriendsListGroupView list={onlineFriends} selectedFriendsIds={selectedFriendsIds} selectFriend={selectFriend} />
-                    </div>
-                );
-            case 'offline':
-                return (
-                    <div style={{ overflow: "auto" }}>
-                        <div className="row mt-1 gx-1" style={{ marginLeft: "0px", marginRight: "0px", padding: "4px" }}>
-                            <div className='col-md-12'>
-                                <button 
-                                    onClick={() => setShowRemoveFriendsConfirmation(true)} 
-                                    disabled={!selectedFriendsIds.length} 
-                                    className='btn w-100 btn-danger'>
-                                    {LocalizeText('friendlist.tip.remove')}
-                                </button>
-                            </div>
-                        </div>
-                        <FriendsListGroupOfflineView list={offlineFriends} selectedFriendsIds={selectedFriendsIds} selectFriend={selectFriend} />
-                    </div>
-                );
-            case 'requests':
-                return (
-                    <div style={{ overflow: "auto" }}>
-                        <div className="row mt-1 gx-1" style={{ marginLeft: "0px", marginRight: "0px", padding: "4px" }}>
-                            <div className='col-md-12'>
-                                <button 
-                                    disabled={!requests.length} 
-                                    onClick={() => requestResponse(-1, false)} 
-                                    className='btn w-100 btn-danger'>
-                                    {LocalizeText('friendlist.tip.declineall')}
-                                </button>
-                            </div>
-                        </div>
-                        <FriendsListRequestView />
-                    </div>
-                );
-            case 'search':
-                return <FriendsSearchView headerText={LocalizeText('people.search.title')} />;
-            default:
-                return null;
-        }
+    const respondToAllRequests = (accept: boolean) => {
+        for (const request of requests) requestResponse(request.id, accept);
     };
 
     return (
         <>
-            <NitroCardView className="nitro-friends" uniqueKey="nitro-friends">
-                <NitroCardHeaderView headerText={LocalizeText('friendlist.friends')} onCloseClick={() => setIsVisible(false)} />
-                <NitroCardTabsView>
-                    {['online', 'offline', 'requests', 'search'].map(tab => (
-                        <NitroCardTabsItemView key={tab} onClick={() => setSection(tab)} isActive={section === tab}>
-                            <Flex gap={0} alignItems="center">
-                                {LocalizeText(`friendlist.${tab}`)}
-                            </Flex>
-                        </NitroCardTabsItemView>
-                    ))}
-                </NitroCardTabsView>
-                <NitroCardContentView overflow="hidden" gap={1} className="text-black p-0">
-                    {renderSection()}
-                </NitroCardContentView>
-            </NitroCardView>
-            {showRoomInvite && 
-                <FriendsRoomInviteView 
-                    selectedFriendsIds={selectedFriendsIds} 
-                    onCloseClick={() => setShowRoomInvite(false)} 
-                    sendRoomInvite={sendRoomInvite} />}
-            {showRemoveFriendsConfirmation && 
-                <FriendsRemoveConfirmationView 
-                    selectedFriendsIds={selectedFriendsIds} 
-                    removeFriendsText={removeFriendsText} 
-                    onCloseClick={() => setShowRemoveFriendsConfirmation(false)} 
-                    removeSelectedFriends={removeSelectedFriends} />}
+            <DraggableWindow
+                uniqueKey="nitro-friends"
+                handleSelector=".hfl-titlebar"
+                windowPosition={DraggableWindowPosition.TOP_LEFT}
+                offsetLeft={110}
+                offsetTop={50}
+            >
+                <div
+                    className={`habbo-friend-list${requests.length ? ' has-requests' : ''}${activePanel === 'search' ? ' search-mode' : ''}${activePanel === 'requests' ? ' requests-mode' : ''}${activePanel === null ? ' collapsed-mode' : ''}`}
+                >
+                    <div className="hfl-titlebar drag-handler">
+                        <span className="hfl-titlebar-grip" />
+                        <span className="hfl-title">{LocalizeText('friendlist.friends')}</span>
+                        <button type="button" className="hfl-close" onClick={() => setIsVisible(false)} />
+                    </div>
+                    <div className="hfl-category">
+                        <button
+                            type="button"
+                            className="hfl-category-current"
+                            aria-expanded={activePanel === 'friends'}
+                            onClick={() => setActivePanel((value) => (value === 'friends' ? null : 'friends'))}
+                        >
+                            {LocalizeText('friendlist.friends')}
+                        </button>
+                    </div>
+                    {activePanel !== null && (
+                        <div className="hfl-content">
+                            {activePanel === 'search' && <FriendsSearchView />}
+                            {activePanel === 'requests' && (
+                                <>
+                                    <FriendsListRequestView />
+                                    <div className="hfl-request-footer" data-testid="requests-footer">
+                                        <button type="button" data-action="accept-all" disabled={!requests.length} onClick={() => respondToAllRequests(true)}>
+                                            {LocalizeText('friendlist.requests.acceptall')}
+                                        </button>
+                                        <button type="button" data-action="dismiss-all" disabled={!requests.length} onClick={() => respondToAllRequests(false)}>
+                                            {LocalizeText('friendlist.requests.dismissall')}
+                                        </button>
+                                    </div>
+                                </>
+                            )}
+                            {activePanel === 'friends' && (
+                                <>
+                                    <section className="hfl-section">
+                                        <button
+                                            type="button"
+                                            className={`hfl-section-header${isOnlineExpanded ? '' : ' collapsed'}`}
+                                            onClick={() => setIsOnlineExpanded((value) => !value)}
+                                        >
+                                            <span>{LocalizeText('friendlist.friends') + ` (${filteredOnlineFriends.length})`}</span>
+                                            <span
+                                                className="hfl-select-all"
+                                                onClick={(event) => {
+                                                    event.stopPropagation();
+                                                    toggleSelectFriends(filteredOnlineFriends.map((friend) => friend.id));
+                                                }}
+                                            >
+                                                {filteredOnlineFriends.length &&
+                                                filteredOnlineFriends.every((friend) => selectedFriendsIds.indexOf(friend.id) >= 0)
+                                                    ? LocalizeText('friendlist.unselect_all')
+                                                    : LocalizeText('friendlist.select_all')}
+                                            </span>
+                                        </button>
+                                        {isOnlineExpanded && (
+                                            <div className="hfl-list">
+                                                <FriendsListGroupView
+                                                    list={filteredOnlineFriends}
+                                                    selectedFriendsIds={selectedFriendsIds}
+                                                    selectFriend={selectFriend}
+                                                />
+                                            </div>
+                                        )}
+                                    </section>
+                                    <section className="hfl-section">
+                                        <button
+                                            type="button"
+                                            className={`hfl-section-header${isOfflineExpanded ? '' : ' collapsed'}`}
+                                            onClick={() => setIsOfflineExpanded((value) => !value)}
+                                        >
+                                            <span>{LocalizeText('friendlist.friends.offlinecaption') + ` (${filteredOfflineFriends.length})`}</span>
+                                        </button>
+                                        {isOfflineExpanded && (
+                                            <div className="hfl-list">
+                                                <FriendsListGroupView
+                                                    list={filteredOfflineFriends}
+                                                    selectedFriendsIds={selectedFriendsIds}
+                                                    selectFriend={selectFriend}
+                                                />
+                                            </div>
+                                        )}
+                                    </section>
+                                </>
+                            )}
+                        </div>
+                    )}
+                    {activePanel === 'friends' && (
+                        <div className="hfl-footer" data-testid="friends-footer">
+                            <div className="hfl-footer-border">
+                                <button
+                                    type="button"
+                                    className="hfl-footer-button invite"
+                                    title={LocalizeText('friendlist.tip.invite')}
+                                    onClick={() => setShowRoomInvite(true)}
+                                />
+                                <button
+                                    type="button"
+                                    className="hfl-footer-button home"
+                                    title={LocalizeText('friendlist.tip.home')}
+                                    onClick={() => CreateLinkEvent('navigator/goto/home')}
+                                />
+                                {isFriendSearchOpen ? (
+                                    <div className="hfl-footer-search">
+                                        <input autoFocus value={friendSearchValue} onChange={(event) => setFriendSearchValue(event.target.value)} />
+                                        <button
+                                            type="button"
+                                            title={LocalizeText('generic.clear')}
+                                            onClick={() => {
+                                                if (friendSearchValue.length) setFriendSearchValue('');
+                                                else setIsFriendSearchOpen(false);
+                                            }}
+                                        />
+                                    </div>
+                                ) : (
+                                    <button
+                                        type="button"
+                                        className="hfl-footer-button search"
+                                        title={LocalizeText('people.search.title')}
+                                        onClick={() => setIsFriendSearchOpen(true)}
+                                    />
+                                )}
+                                <button
+                                    type="button"
+                                    className="hfl-footer-button delete"
+                                    disabled={!selectedFriendsIds.length}
+                                    title={LocalizeText('generic.delete')}
+                                    onClick={() => selectedFriendsIds.length && setShowRemoveFriendsConfirmation(true)}
+                                />
+                            </div>
+                        </div>
+                    )}
+                    {!!requests.length && (
+                        <button
+                            type="button"
+                            className="hfl-request-strip"
+                            onClick={() => setActivePanel((value) => (value === 'requests' ? null : 'requests'))}
+                        >
+                            {LocalizeText('friendlist.tab.friendrequests')}
+                        </button>
+                    )}
+                    <button type="button" className="hfl-search-strip" onClick={() => setActivePanel((value) => (value === 'search' ? null : 'search'))}>
+                        {LocalizeText('generic.search')}
+                    </button>
+                    <div className="hfl-bottom" />
+                </div>
+            </DraggableWindow>
+            {showRoomInvite && (
+                <FriendsRoomInviteView selectedFriendsIds={selectedFriendsIds} sendRoomInvite={sendRoomInvite} onCloseClick={() => setShowRoomInvite(false)} />
+            )}
+            {showRemoveFriendsConfirmation && (
+                <FriendsRemoveConfirmationView
+                    removeFriendsText={removeFriendsText}
+                    removeSelectedFriends={removeSelectedFriends}
+                    selectedFriendsIds={selectedFriendsIds}
+                    onCloseClick={() => setShowRemoveFriendsConfirmation(false)}
+                />
+            )}
         </>
     );
 };

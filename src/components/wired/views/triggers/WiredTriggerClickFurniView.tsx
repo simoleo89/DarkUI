@@ -1,0 +1,35 @@
+import { FC, useEffect, useState } from 'react';
+import { WiredFurniType } from '../../../../api';
+import { useWired } from '../../../../hooks';
+import { WiredSourceOption, WiredSourcesSelector } from '../WiredSourcesSelector';
+import { WiredTriggerBaseView } from './WiredTriggerBaseView';
+
+// Server WiredTriggerHabboClicksFurni.normalizeFurniSource keeps SELECTED(100)/SELECTOR(200) and maps
+// everything else to SOURCE_TRIGGER(0); resolveCandidateItems(0) returns the furni that fired the trigger.
+const FURNI_SOURCE_OPTIONS: WiredSourceOption[] = [
+    { value: 0, label: 'wiredfurni.params.sources.furni.0' },
+    { value: 100, label: 'wiredfurni.params.sources.furni.100' },
+    { value: 200, label: 'wiredfurni.params.sources.furni.200' }
+];
+
+const normalizeFurniSource = (value: number) => (FURNI_SOURCE_OPTIONS.some((option) => option.value === value) ? value : 100);
+
+export const WiredTriggerClickFurniView: FC<{}> = () => {
+    const { trigger = null, setIntParams = null } = useWired();
+    const [furniSource, setFurniSource] = useState(100);
+
+    const save = () => setIntParams([furniSource]);
+
+    useEffect(() => {
+        setFurniSource(trigger?.intData?.length > 0 ? normalizeFurniSource(trigger.intData[0]) : 100);
+    }, [trigger]);
+
+    return (
+        <WiredTriggerBaseView
+            hasSpecialInput={false}
+            requiresFurni={WiredFurniType.STUFF_SELECTION_OPTION_BY_ID_BY_TYPE_OR_FROM_CONTEXT}
+            save={save}
+            footer={<WiredSourcesSelector showFurni={true} furniSource={furniSource} furniSources={FURNI_SOURCE_OPTIONS} onChangeFurni={setFurniSource} />}
+        />
+    );
+};

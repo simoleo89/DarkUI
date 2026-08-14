@@ -1,48 +1,73 @@
-import { FC, MouseEvent, useMemo } from 'react';
-import { FaFlag, FaTimes } from 'react-icons/fa';
+import { FC, MouseEvent } from 'react';
+import { FaFlag } from 'react-icons/fa';
 import { Base, Column, ColumnProps, Flex } from '..';
 
-interface NitroCardHeaderViewProps extends ColumnProps
-{
+interface NitroCardHeaderViewProps extends ColumnProps {
     headerText: string;
     isGalleryPhoto?: boolean;
     noCloseButton?: boolean;
+    isInfoToHabboPages?: boolean;
     onReportPhoto?: (event: MouseEvent) => void;
+    onClickInfoHabboPages?: (event: MouseEvent) => void;
     onCloseClick: (event: MouseEvent) => void;
 }
 
-export const NitroCardHeaderView: FC<NitroCardHeaderViewProps> = props =>
-{
-    const { headerText = null, isGalleryPhoto = false, noCloseButton = false, onReportPhoto = null, onCloseClick = null, justifyContent = 'center', alignItems = 'center', classNames = [], children = null, ...rest } = props;
+export const NitroCardHeaderView: FC<NitroCardHeaderViewProps> = (props) => {
+    const {
+        headerText = null,
+        isGalleryPhoto = false,
+        noCloseButton = false,
+        isInfoToHabboPages = false,
+        onReportPhoto = null,
+        onClickInfoHabboPages = null,
+        onCloseClick = null,
+        justifyContent = 'center',
+        alignItems = 'center',
+        classNames = [],
+        className = '',
+        children = null,
+        ...rest
+    } = props;
 
-    const getClassNames = useMemo(() =>
-    {
-        const newClassNames: string[] = [ 'drag-handler', 'container-fluid', 'nitro-card-header' ];
-
-        if(classNames.length) newClassNames.push(...classNames);
-
-        return newClassNames;
-    }, [ classNames ]);
-
-    const onMouseDown = (event: MouseEvent<HTMLDivElement>) =>
-    {
+    const onMouseDown = (event: MouseEvent<HTMLDivElement>) => {
         event.stopPropagation();
         event.nativeEvent.stopImmediatePropagation();
-    }
+    };
 
     return (
-        <Column center position="relative" classNames={ getClassNames } { ...rest }>
-            <Flex fullWidth>
-                <span className="nitro-card-header-text">{ headerText }</span>
-                { isGalleryPhoto &&
-                    <Base position="absolute" className="end-4 nitro-card-header-report-camera" onClick={ onReportPhoto }>
+        <Column
+            center
+            classNames={[
+                'nitro-card-header-shell',
+                'relative',
+                'flex',
+                'items-center',
+                'justify-center',
+                'flex-col',
+                'drag-handler',
+                'min-h-card-header',
+                'max-h-card-header',
+                ...classNames
+            ]}
+            className={className}
+            {...rest}
+        >
+            <Flex center fullWidth>
+                <span className="nitro-card-title text-white">{headerText}</span>
+                {isGalleryPhoto && (
+                    <Base className="inset-e-4 nitro-card-header-report-camera" position="absolute" onClick={onReportPhoto}>
                         <FaFlag className="fa-icon" />
                     </Base>
-                }
-                <Flex center position="absolute" className="end-2 nitro-card-header-close" onMouseDownCapture={ onMouseDown } onClick={ onCloseClick }>
-                    <FaTimes className="fa-icon w-12 h-12" />
-                </Flex>
+                )}
+                {isInfoToHabboPages && (
+                    <Base className="absolute right-8 nitro-card-header-info-habbopages cursor-pointer" position="absolute" onClick={onClickInfoHabboPages} />
+                )}
+                <div
+                    className="absolute flex items-center justify-center cursor-pointer right-2 nitro-card-close-button"
+                    onClick={onCloseClick}
+                    onMouseDownCapture={onMouseDown}
+                ></div>
             </Flex>
         </Column>
     );
-}
+};

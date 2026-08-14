@@ -1,5 +1,4 @@
-export interface IChatEntry
-{
+export interface IChatEntry {
     id: number;
     webId: number;
     entityId: number;
@@ -11,6 +10,11 @@ export interface IChatEntry
     chatType?: number;
     imageUrl?: string;
     color?: string;
+    showTranslation?: boolean;
+    originalMessage?: string;
+    translatedMessage?: string;
+    detectedLanguage?: string;
+    targetLanguage?: string;
     roomId: number;
     timestamp: string;
     type: number;

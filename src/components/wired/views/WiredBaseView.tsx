@@ -1,113 +1,200 @@
-import { FC, PropsWithChildren, useEffect, useState } from 'react';
-import { GetSessionDataManager, LocalizeText, WiredFurniType, WiredSelectionVisualizer } from '../../../api';
-import { Button, Column, Flex, NitroCardContentView, NitroCardHeaderView, NitroCardView, Text } from '../../../common';
-import { useWired } from '../../../hooks';
+import { GetRoomEngine, GetSessionDataManager } from '@nitrots/nitro-renderer';
+import { CSSProperties, FC, PropsWithChildren, ReactNode, useEffect, useState } from 'react';
+import { LocalizeText, WiredFurniType, WiredSelectionVisualizer } from '../../../api';
+import wiredBgLeft from '../../../assets/images/wired/wired_bg_left.png';
+import wiredBgRight from '../../../assets/images/wired/wired_bg_right.png';
+import { Button, NitroCardContentView, NitroCardHeaderView, NitroCardView, Text } from '../../../common';
+import { useWired, useWiredTools } from '../../../hooks';
 import { WiredFurniSelectorView } from './WiredFurniSelectorView';
 
-export interface WiredBaseViewProps
-{
+export interface WiredBaseViewProps {
     wiredType: string;
     requiresFurni: number;
     hasSpecialInput: boolean;
     save: () => void;
     validate?: () => boolean;
+    cardStyle?: CSSProperties;
+    footer?: ReactNode;
+    footerCollapsible?: boolean;
+    selectionPreview?: ReactNode;
 }
 
-export const WiredBaseView: FC<PropsWithChildren<WiredBaseViewProps>> = props =>
-{
-    const { wiredType = '', requiresFurni = WiredFurniType.STUFF_SELECTION_OPTION_NONE, save = null, validate = null, children = null, hasSpecialInput = false } = props;
-    const [ wiredName, setWiredName ] = useState<string>(null);
-    const [ wiredDescription, setWiredDescription ] = useState<string>(null);
-    const [ needsSave, setNeedsSave ] = useState<boolean>(false);
-    const { trigger = null, setTrigger = null, setIntParams = null, setStringParam = null, setFurniIds = null, setAllowsFurni = null, saveWired = null } = useWired();
+export const WiredBaseView: FC<PropsWithChildren<WiredBaseViewProps>> = (props) => {
+    const WIRED_CARD_WIDTH = 244;
+    const {
+        wiredType = '',
+        requiresFurni = WiredFurniType.STUFF_SELECTION_OPTION_NONE,
+        save = null,
+        validate = null,
+        children = null,
+        hasSpecialInput = false,
+        cardStyle = undefined,
+        footer = null,
+        footerCollapsible = true,
+        selectionPreview = null
+    } = props;
+    const [wiredName, setWiredName] = useState<string>(null);
+    const [needsSave, setNeedsSave] = useState<boolean>(false);
+    const [showFooter, setShowFooter] = useState(false);
+    const {
+        trigger = null,
+        setTrigger = null,
+        setIntParams = null,
+        setStringParam = null,
+        setFurniIds = null,
+        setAllowsFurni = null,
+        saveWired = null
+    } = useWired();
+    const { roomSettings } = useWiredTools();
 
-    const onClose = () => setTrigger(null);
-    
-    const onSave = () =>
-    {
-        if(validate && !validate()) return;
+    const clearRoomAreaSelection = () => {
+        GetRoomEngine().areaSelectionManager.clearHighlight();
+        GetRoomEngine().areaSelectionManager.deactivate();
+    };
 
-        if(save) save();
+    const onClose = () => {
+        clearRoomAreaSelection();
+        WiredSelectionVisualizer.clearAllSelectionShaders();
+        setTrigger(null);
+    };
+
+    const onSave = () => {
+        if (!roomSettings.canModify) return;
+
+        if (validate && !validate()) return;
+
+        if (save) save();
 
         setNeedsSave(true);
-    }
+    };
 
-    useEffect(() =>
-    {
-        if(!needsSave) return;
+    useEffect(() => {
+        if (!needsSave) return;
 
         saveWired();
 
         setNeedsSave(false);
-    }, [ needsSave, saveWired ]);
+    }, [needsSave, saveWired]);
 
-    useEffect(() =>
-    {
-        if(!trigger) return;
+    useEffect(() => {
+        if (!trigger) return;
 
-        const spriteId = (trigger.spriteId || -1);
+        setShowFooter(false);
+
+        WiredSelectionVisualizer.clearAllSelectionShaders();
+
+        const spriteId = trigger.spriteId || -1;
         const furniData = GetSessionDataManager().getFloorItemData(spriteId);
 
-        if(!furniData)
-        {
-            setWiredName(('NAME: ' + spriteId));
-            setWiredDescription(('NAME: ' + spriteId));
-        }
-        else
-        {
+        if (!furniData) {
+            setWiredName('NAME: ' + spriteId);
+        } else {
             setWiredName(furniData.name);
-            setWiredDescription(furniData.description);
         }
 
-        if(hasSpecialInput)
-        {
+        if (hasSpecialInput) {
             setIntParams(trigger.intData);
             setStringParam(trigger.stringData);
         }
-        
-        if(requiresFurni > WiredFurniType.STUFF_SELECTION_OPTION_NONE)
-        {
-            setFurniIds(prevValue =>
-            {
-                if(prevValue && prevValue.length) WiredSelectionVisualizer.clearSelectionShaderFromFurni(prevValue);
+    }, [trigger, hasSpecialInput, setIntParams, setStringParam]);
 
-                if(trigger.selectedItems && trigger.selectedItems.length)
-                {
-                    WiredSelectionVisualizer.applySelectionShaderToFurni(trigger.selectedItems);
+    useEffect(() => {
+        if (!trigger) return;
 
-                    return trigger.selectedItems;
-                }
+        setFurniIds((prevValue) => {
+            if (prevValue && prevValue.length) WiredSelectionVisualizer.clearSelectionShaderFromFurni(prevValue);
 
-                return [];
-            });
-        }
+            if (requiresFurni <= WiredFurniType.STUFF_SELECTION_OPTION_NONE) return [];
+
+            if (trigger.selectedItems && trigger.selectedItems.length) {
+                WiredSelectionVisualizer.applySelectionShaderToFurni(trigger.selectedItems);
+
+                return trigger.selectedItems;
+            }
+
+            return [];
+        });
+    }, [trigger, requiresFurni, setFurniIds]);
+
+    useEffect(() => {
+        return () => clearRoomAreaSelection();
+    }, []);
+
+    useEffect(() => {
+        if (!trigger) return;
 
         setAllowsFurni(requiresFurni);
-    }, [ trigger, hasSpecialInput, requiresFurni, setIntParams, setStringParam, setFurniIds, setAllowsFurni ]);
+    }, [trigger, requiresFurni, setAllowsFurni]);
+
+    const resolvedCardStyle: CSSProperties = { ...cardStyle };
+
+    resolvedCardStyle.width = WIRED_CARD_WIDTH;
+    resolvedCardStyle.minWidth = WIRED_CARD_WIDTH;
+    resolvedCardStyle.maxWidth = WIRED_CARD_WIDTH;
+    resolvedCardStyle.resize = 'none';
 
     return (
-        <NitroCardView uniqueKey="nitro-wired" className="nitro-wired" theme="primary-slim">
-            <NitroCardHeaderView headerText={ LocalizeText('wiredfurni.title') } onCloseClick={ onClose } />
-            <NitroCardContentView>
-                <Column gap={ 1 }>
-                    <Flex alignItems="center" gap={ 1 }>
-                        <i className={ `icon icon-wired-${ wiredType }` } />
-                        <Text bold>{ wiredName }</Text>
-                    </Flex>
-                    <Text small>{ wiredDescription }</Text>
-                </Column>
-                { !!children && <hr className="m-0 bg-dark" /> }
-                { children }
-                { (requiresFurni > WiredFurniType.STUFF_SELECTION_OPTION_NONE) &&
-                    <>
-                        <hr className="m-0 bg-dark" />
-                        <WiredFurniSelectorView />
-                    </> }
-                <Flex alignItems="center" gap={ 1 }>
-                    <Button fullWidth variant="success" onClick={ onSave }>{ LocalizeText('wiredfurni.ready') }</Button>
-                    <Button fullWidth variant="secondary" onClick={ onClose }>{ LocalizeText('cancel') }</Button>
-                </Flex>
+        <NitroCardView
+            className="nitro-wired max-h-[calc(100vh-16px)]"
+            theme="primary-slim"
+            uniqueKey="nitro-wired"
+            isResizable={false}
+            style={resolvedCardStyle}
+        >
+            <NitroCardHeaderView classNames={['nitro-wired__header']} headerText={LocalizeText('wiredfurni.title')} onCloseClick={onClose} />
+            <NitroCardContentView classNames={['nitro-wired__content']} gap={0}>
+                <div className="nitro-wired__section nitro-wired__summary">
+                    <img className="nitro-wired__summary-bg nitro-wired__summary-bg--left" src={wiredBgLeft} alt="" />
+                    <img className="nitro-wired__summary-bg nitro-wired__summary-bg--right" src={wiredBgRight} alt="" />
+                    <div className="nitro-wired__summary-copy">
+                        <Text bold className="nitro-wired__summary-title">
+                            {wiredName}
+                        </Text>
+                    </div>
+                </div>
+                <div className="nitro-wired__body">
+                    {!!children && <div className="nitro-wired__divider" />}
+                    {!!children && <div className="nitro-wired__section nitro-wired__section--body">{children}</div>}
+                    {requiresFurni > WiredFurniType.STUFF_SELECTION_OPTION_NONE && (
+                        <>
+                            <div className="nitro-wired__divider" />
+                            <div className="nitro-wired__section nitro-wired__section--selector">{selectionPreview || <WiredFurniSelectorView />}</div>
+                        </>
+                    )}
+                    {footer && (
+                        <>
+                            <div className="nitro-wired__divider" />
+                            <div className="nitro-wired__section nitro-wired__section--footer">
+                                {footerCollapsible ? (
+                                    <>
+                                        <button className="nitro-wired__advanced-toggle" type="button" onClick={() => setShowFooter((value) => !value)}>
+                                            {LocalizeText(showFooter ? 'wiredfurni.params.sources.collapse' : 'wiredfurni.params.sources.expand')}
+                                        </button>
+                                        {showFooter && <div className="nitro-wired__advanced-body">{footer}</div>}
+                                    </>
+                                ) : (
+                                    footer
+                                )}
+                            </div>
+                        </>
+                    )}
+                    <div className="nitro-wired__divider" />
+                    <div className="flex items-center gap-1 nitro-wired__actions">
+                        <Button
+                            disabled={!roomSettings.canModify}
+                            fullWidth
+                            variant="success"
+                            classNames={['nitro-wired__button', 'nitro-wired__button--primary']}
+                            onClick={onSave}
+                        >
+                            {LocalizeText('wiredfurni.ready')}
+                        </Button>
+                        <Button fullWidth variant="secondary" classNames={['nitro-wired__button', 'nitro-wired__button--secondary']} onClick={onClose}>
+                            {LocalizeText('cancel')}
+                        </Button>
+                    </div>
+                </div>
             </NitroCardContentView>
         </NitroCardView>
     );
-}
+};

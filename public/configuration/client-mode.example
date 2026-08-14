@@ -1,0 +1,8 @@
+{
+    "distObfuscationEnabled": false,
+    "secureAssetsEnabled": false,
+    "secureApiEnabled": false,
+    "apiBaseUrl": "http://localhost:2096",
+    "plainConfigBaseUrl": "/configuration/",
+    "plainGamedataBaseUrl": "/nitro-assets/gamedata/"
+}

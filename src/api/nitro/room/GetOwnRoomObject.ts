@@ -1,9 +1,7 @@
-import { IRoomObjectController, RoomObjectCategory } from '@nitrots/nitro-renderer';
-import { GetRoomSession, GetSessionDataManager } from '../session';
-import { GetRoomEngine } from './GetRoomEngine';
+import { GetRoomEngine, GetSessionDataManager, IRoomObjectController, RoomObjectCategory } from '@nitrots/nitro-renderer';
+import { GetRoomSession } from '../session';
 
-export function GetOwnRoomObject(): IRoomObjectController
-{
+export function GetOwnRoomObject(): IRoomObjectController {
     const userId = GetSessionDataManager().userId;
     const roomId = GetRoomEngine().activeRoomId;
     const category = RoomObjectCategory.UNIT;
@@ -11,17 +9,14 @@ export function GetOwnRoomObject(): IRoomObjectController
 
     let i = 0;
 
-    while(i < totalObjects)
-    {
+    while (i < totalObjects) {
         const roomObject = GetRoomEngine().getRoomObjectByIndex(roomId, i, category);
 
-        if(roomObject)
-        {
+        if (roomObject) {
             const userData = GetRoomSession().userDataManager.getUserDataByIndex(roomObject.id);
 
-            if(userData)
-            {
-                if(userData.webID === userId) return roomObject;
+            if (userData) {
+                if (userData.webID === userId) return roomObject;
             }
         }
 

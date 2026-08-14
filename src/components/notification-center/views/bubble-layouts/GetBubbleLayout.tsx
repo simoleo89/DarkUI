@@ -1,18 +1,25 @@
-import { NotificationBubbleItem, NotificationBubbleType } from '../../../../api';
+import { MentionNotificationBubbleItem, NotificationBubbleItem, NotificationBubbleType } from '../../../../api';
+import { NotificationBadgeReceivedBubbleView } from './NotificationBadgeReceivedBubbleView';
 import { NotificationClubGiftBubbleView } from './NotificationClubGiftBubbleView';
 import { NotificationDefaultBubbleView } from './NotificationDefaultBubbleView';
+import { NotificationFriendOnlineBubbleView } from './NotificationFriendOnlineBubbleView';
+import { NotificationMentionBubbleView } from './NotificationMentionBubbleView';
 
-export const GetBubbleLayout = (item: NotificationBubbleItem, onClose: () => void) =>
-{
-    if(!item) return null;
+export const GetBubbleLayout = (item: NotificationBubbleItem, onClose: () => void) => {
+    if (!item) return null;
 
     const props = { item, onClose };
 
-    switch(item.notificationType)
-    {
+    switch (item.notificationType) {
+        case NotificationBubbleType.BADGE_RECEIVED:
+            return <NotificationBadgeReceivedBubbleView key={item.id} {...props} />;
         case NotificationBubbleType.CLUBGIFT:
-            return <NotificationClubGiftBubbleView key={item.id} { ...props } />
+            return <NotificationClubGiftBubbleView key={item.id} {...props} />;
+        case NotificationBubbleType.FRIENDONLINE:
+            return <NotificationFriendOnlineBubbleView key={item.id} {...props} />;
+        case NotificationBubbleType.MENTION:
+            return <NotificationMentionBubbleView key={item.id} item={item as MentionNotificationBubbleItem} onClose={onClose} />;
         default:
-            return <NotificationDefaultBubbleView key={item.id} { ...props } />
+            return <NotificationDefaultBubbleView key={item.id} {...props} />;
     }
-}
+};

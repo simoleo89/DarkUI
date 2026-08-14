@@ -1,2 +1,2 @@
 export * from './useGameCenter';
-export * from './useIsPlaying';
+export * from './useSnowWar';

@@ -1,67 +1,68 @@
 import { FC, useEffect, useState } from 'react';
-import ReactSlider from 'react-slider';
-import { LocalizeText, WiredFurniType } from '../../../../api';
-import { Column, Flex, Text } from '../../../../common';
+import { LocalizeText, localizeWithFallback, WiredFurniType } from '../../../../api';
+import { Slider, Text } from '../../../../common';
 import { useWired } from '../../../../hooks';
 import { WiredActionBaseView } from './WiredActionBaseView';
 
-export const WiredActionGiveScoreToPredefinedTeamView: FC<{}> = props =>
-{
-    const [ points, setPoints ] = useState(1);
-    const [ time, setTime ] = useState(1);
-    const [ selectedTeam, setSelectedTeam ] = useState(1);
+export const WiredActionGiveScoreToPredefinedTeamView: FC<{}> = (props) => {
+    const [points, setPoints] = useState(1);
+    const [operation, setOperation] = useState(0);
+    const [selectedTeam, setSelectedTeam] = useState(1);
     const { trigger = null, setIntParams = null } = useWired();
 
-    const save = () => setIntParams([ points, time, selectedTeam ]);
+    const save = () => setIntParams([points, operation, selectedTeam]);
 
-    useEffect(() =>
-    {
-        if(trigger.intData.length >= 2)
-        {
+    useEffect(() => {
+        if (trigger.intData.length >= 3) {
             setPoints(trigger.intData[0]);
-            setTime(trigger.intData[1]);
+            setOperation(trigger.intData[1]);
             setSelectedTeam(trigger.intData[2]);
-        }
-        else
-        {
+        } else {
             setPoints(1);
-            setTime(1);
+            setOperation(0);
             setSelectedTeam(1);
         }
-    }, [ trigger ]);
+    }, [trigger]);
 
     return (
-        <WiredActionBaseView requiresFurni={ WiredFurniType.STUFF_SELECTION_OPTION_NONE } hasSpecialInput={ true } save={ save }>
-            <Column gap={ 1 }>
-                <Text bold>{ LocalizeText('wiredfurni.params.setpoints', [ 'points' ], [ points.toString() ]) }</Text>
-                <ReactSlider
-                    className={ 'nitro-slider' }
-                    min={ 1 }
-                    max={ 100 }
-                    value={ points }
-                    onChange={ event => setPoints(event) } />
-            </Column>
-            <Column gap={ 1 }>
-                <Text bold>{ LocalizeText('wiredfurni.params.settimesingame', [ 'times' ], [ time.toString() ]) }</Text>
-                <ReactSlider
-                    className={ 'nitro-slider' }
-                    min={ 1 }
-                    max={ 10 }
-                    value={ time }
-                    onChange={ event => setTime(event) } />
-            </Column>
-            <Column gap={ 1 }>
-                <Text bold>{ LocalizeText('wiredfurni.params.team') }</Text>
-                { [ 1, 2, 3, 4 ].map(value =>
-                {
+        <WiredActionBaseView hasSpecialInput={true} requiresFurni={WiredFurniType.STUFF_SELECTION_OPTION_NONE} save={save}>
+            <div className="flex flex-col gap-1">
+                <Text bold>{localizeWithFallback('wiredfurni.params.setpoints2', LocalizeText('wiredfurni.params.setpoints', ['points'], [points.toString()]), ['points'], [points.toString()])}</Text>
+                <Slider max={1000} min={1} value={points} onChange={(event) => setPoints(event)} />
+            </div>
+            <div className="flex flex-col gap-1">
+                <Text bold>{LocalizeText('wiredfurni.params.choose_type')}</Text>
+                {[0, 1].map((value) => (
+                    <label key={value} className="flex items-center gap-1">
+                        <input
+                            checked={operation === value}
+                            className="form-check-input"
+                            name="pointsOperation"
+                            type="radio"
+                            onChange={() => setOperation(value)}
+                        />
+                        <Text>{LocalizeText(`wiredfurni.params.points_operation.${value}`)}</Text>
+                    </label>
+                ))}
+            </div>
+            <div className="flex flex-col gap-1">
+                <Text bold>{LocalizeText('wiredfurni.params.team')}</Text>
+                {[1, 2, 3, 4].map((value) => {
                     return (
-                        <Flex key={ value } gap={ 1 }>
-                            <input className="form-check-input" type="radio" name="selectedTeam" id={ `selectedTeam${ value }` } checked={ (selectedTeam === value) } onChange={ event => setSelectedTeam(value) } />
-                            <Text>{ LocalizeText('wiredfurni.params.team.' + value) }</Text>
-                        </Flex>
+                        <div key={value} className="flex gap-1">
+                            <input
+                                checked={selectedTeam === value}
+                                className="form-check-input"
+                                id={`selectedTeam${value}`}
+                                name="selectedTeam"
+                                type="radio"
+                                onChange={(event) => setSelectedTeam(value)}
+                            />
+                            <Text>{LocalizeText('wiredfurni.params.team.' + value)}</Text>
+                        </div>
                     );
-                }) }
-            </Column>
+                })}
+            </div>
         </WiredActionBaseView>
     );
-}
+};

@@ -1,170 +1,294 @@
-import { ILinkEventTracker } from '@nitrots/nitro-renderer';
-import { FC, useEffect, useState } from 'react';
-import { AddEventLinkTracker, GetConfiguration, LocalizeText, RemoveLinkEventTracker } from '../../api';
-import { Column, Flex, Grid, NitroCardContentView, NitroCardHeaderView, NitroCardTabsItemView, NitroCardTabsView, NitroCardView } from '../../common';
-import { useCatalog } from '../../hooks';
+import { AddLinkEventTracker, ILinkEventTracker, RemoveLinkEventTracker } from '@nitrots/nitro-renderer';
+import { FC, useEffect, useMemo, useRef, useState } from 'react';
+import { FaBars, FaCog } from 'react-icons/fa';
+import { CatalogType, GetConfigurationValue, LocalizeShortNumber, LocalizeText, SanitizeHtml } from '../../api';
+import { LayoutCurrencyIcon, NitroCardContentView, NitroCardHeaderView, NitroCardTabsItemView, NitroCardTabsView, NitroCardView } from '../../common';
+import { useCatalogActions, useCatalogData, useCatalogUiState, useHasPermission, usePurse } from '../../hooks';
+import { CatalogAdminProvider, useCatalogAdmin } from './CatalogAdminContext';
+import { CatalogStudioProvider } from './admin/studio/CatalogStudioProvider';
+import { parseCatalogTabLabel, useCatalogWindowWidth } from './useCatalogWindowWidth';
+import { CatalogAdminManagerView } from './views/admin/CatalogAdminManagerView';
+import { CatalogAdminOfferEditView } from './views/admin/CatalogAdminOfferEditView';
+import { CatalogAdminPageEditView } from './views/admin/CatalogAdminPageEditView';
+import { CatalogBuildersClubStatusView } from './views/catalog-header/CatalogBuildersClubStatusView';
 import { CatalogIconView } from './views/catalog-icon/CatalogIconView';
 import { CatalogGiftView } from './views/gift/CatalogGiftView';
+import { CatalogBreadcrumbView } from './views/navigation/CatalogBreadcrumbView';
 import { CatalogNavigationView } from './views/navigation/CatalogNavigationView';
+import { CatalogSearchView } from './views/page/common/CatalogSearchView';
 import { GetCatalogLayout } from './views/page/layout/GetCatalogLayout';
 import { MarketplacePostOfferView } from './views/page/layout/marketplace/MarketplacePostOfferView';
 
-export const CatalogView: FC<{}> = props =>
-{
-    const { isVisible = false, setIsVisible = null, rootNode = null, currentPage = null, navigationHidden = false, setNavigationHidden = null, activeNodes = [], searchResult = null, setSearchResult = null, openPageByName = null, openPageByOfferId = null, activateNode = null, getNodeById, openPageById } = useCatalog();
-    const [favourites, setFavourites] = useState(null);
-    const [isFavoriteActive, setIsFavoriteActive] = useState(false);
+const CatalogViewInner: FC<{}> = () => {
+    const { rootNode = null, currentPage = null, searchResult = null } = useCatalogData();
+    const {
+        isVisible = false,
+        setIsVisible = null,
+        navigationHidden = false,
+        setNavigationHidden = null,
+        activeNodes = [],
+        setSearchResult = null,
+        currentType = CatalogType.NORMAL
+    } = useCatalogUiState();
+    const { openPageById = null, openPageByName = null, openPageByOfferId = null, activateNode = null, openCatalogByType = null, toggleCatalogByType = null } = useCatalogActions();
+    const catalogAdmin = useCatalogAdmin();
+    const adminMode = catalogAdmin?.adminMode ?? false;
+    const setAdminMode = catalogAdmin?.setAdminMode ?? (() => {});
 
-    const goToFavouritePage = (id) => {
-        setIsFavoriteActive(false);
-        openPageById(id);
-    }
+    const isMod = useHasPermission('acc_catalogfurni');
+    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+    const { purse = null } = usePurse();
+    const displayedCurrencies = GetConfigurationValue<number[]>('system.currency.types', []);
+    const activeCatalogNode = activeNodes?.[activeNodes.length - 1] ?? null;
+    const buildersClubEnabled = GetConfigurationValue<boolean>('buildersclub.enabled', GetConfigurationValue<boolean>('toolbar.buildersclub.enabled', true));
+    // Strip SWF-style suffixes like "(BC)" or "(Hot)" but keep the
+    // pageId hint the gameserver appends when the viewer has
+    // ACC_CATALOG_IDS - that's a pure-numeric "(6)" trailer.
+    const stripSwfTabSuffix = (label: string) => (label || '').replace(/\s*\(\D[^)]*\)\s*$/g, '').trim();
+    const getSwfTabLabel = (label: string) => stripSwfTabSuffix(parseCatalogTabLabel(label).name);
+    const tabsShellRef = useRef<HTMLDivElement>(null);
 
-    const deleteFavouritePage = (id) => {
-        setFavourites(favourites.filter(x => x.pageId != id));
-        window.localStorage.setItem("catalog-favourites", JSON.stringify(favourites.filter(x => x.pageId != id)));
-    }
+    const visibleRootTabCount = useMemo(() => {
+        if (!rootNode?.children?.length) return 0;
+
+        return rootNode.children.filter((child, index) => {
+            if (!child.isVisible) return false;
+            if (index === 0 && getSwfTabLabel(child.localization).toLowerCase().includes('rari')) return false;
+
+            return true;
+        }).length;
+    }, [rootNode]);
+
+    const catalogWindowStyle = useCatalogWindowWidth(
+        tabsShellRef,
+        isVisible,
+        visibleRootTabCount,
+        adminMode,
+        isMod,
+        currentType,
+        rootNode?.pageId,
+        activeCatalogNode?.pageId
+    );
 
     useEffect(() => {
-        if(isFavoriteActive){
-            var localStorage = window.localStorage;
-            if(localStorage.getItem("catalog-favourites") === null){
-                setFavourites([]);
-                return;
+        const getCatalogTypeFromLink = (type?: string) => {
+            switch ((type || '').toLowerCase()) {
+                case 'bc':
+                case 'builder':
+                case 'buildersclub':
+                case 'builders_club':
+                    return buildersClubEnabled ? CatalogType.BUILDER : CatalogType.NORMAL;
+                default:
+                    return CatalogType.NORMAL;
             }
+        };
 
-            setFavourites(JSON.parse(localStorage.getItem("catalog-favourites")));
-        }
-    }, [isFavoriteActive])
-
-    useEffect(() =>
-    {
         const linkTracker: ILinkEventTracker = {
-            linkReceived: (url: string) =>
-            {
+            linkReceived: (url: string) => {
                 const parts = url.split('/');
-        
-                if(parts.length < 2) return;
-        
-                switch(parts[1])
-                {
+
+                if (parts.length < 2) return;
+
+                switch (parts[1]) {
                     case 'show':
+                        if (parts.length > 2) {
+                            openCatalogByType(getCatalogTypeFromLink(parts[2]));
+
+                            return;
+                        }
+
                         setIsVisible(true);
                         return;
                     case 'hide':
                         setIsVisible(false);
                         return;
                     case 'toggle':
-                        setIsVisible(prevValue => !prevValue);
+                        if (parts.length > 2) {
+                            toggleCatalogByType(getCatalogTypeFromLink(parts[2]));
+
+                            return;
+                        }
+
+                        setIsVisible((prevValue) => !prevValue);
                         return;
                     case 'open':
-                        if(parts.length > 2)
-                        {
-                            if(parts.length === 4)
-                            {
-                                switch(parts[2])
-                                {
+                        if (parts.length > 2) {
+                            if (parts.length === 4) {
+                                switch (parts[2]) {
                                     case 'offerId':
                                         openPageByOfferId(parseInt(parts[3]));
                                         return;
                                 }
+                            } else {
+                                const pageId = Number(parts[2]);
+
+                                if (Number.isInteger(pageId) && pageId > 0) openPageById(pageId);
+                                else openPageByName(parts[2]);
                             }
-                            else
-                            {
-                                openPageByName(parts[2]);
-                            }
-                        }
-                        else
-                        {
+                        } else {
                             setIsVisible(true);
                         }
-        
+
                         return;
                 }
             },
             eventUrlPrefix: 'catalog/'
         };
 
-        AddEventLinkTracker(linkTracker);
+        AddLinkEventTracker(linkTracker);
 
         return () => RemoveLinkEventTracker(linkTracker);
-    }, [ setIsVisible, openPageByOfferId, openPageByName ]);
+    }, [setIsVisible, openPageById, openPageByOfferId, openPageByName, openCatalogByType, toggleCatalogByType, buildersClubEnabled]);
 
     return (
         <>
-            { isVisible &&
-                <NitroCardView uniqueKey="catalog" className="nitro-catalog" style={GetConfiguration('catalog.headers') ? { width: 710 } : {}}>
-                    <NitroCardHeaderView headerText={LocalizeText('catalog.title')} onCloseClick={event => setIsVisible(false)} />
-                    <NitroCardTabsView subClassName="w-100">
-                        {rootNode && rootNode.children.length > 0 && rootNode.children.map((child, index) => {
+            {isVisible && (
+                <NitroCardView
+                    classNames={['nitro-catalog-window']}
+                    dragStyle={catalogWindowStyle}
+                    isResizable={false}
+                    style={catalogWindowStyle}
+                    uniqueKey="catalog"
+                >
+                    <NitroCardHeaderView
+                        className={currentType === CatalogType.BUILDER ? 'builders-club-card-header' : ''}
+                        headerText={LocalizeText('catalog.title')}
+                        onCloseClick={() => setIsVisible(false)}
+                    />
+                    <div className="nitro-catalog-mobile-header">
+                        {isMod && (
+                            <div className="nitro-catalog-mobile-burger">
+                                <button className="nitro-catalog-burger-btn" onClick={() => setMobileMenuOpen((value) => !value)}>
+                                    <FaBars />
+                                </button>
+                                {mobileMenuOpen && (
+                                    <div className="nitro-catalog-burger-menu">
+                                        <button
+                                            onClick={() => {
+                                                setAdminMode(!adminMode);
+                                                setMobileMenuOpen(false);
+                                            }}
+                                        >
+                                            {adminMode ? 'Exit Admin' : 'Admin'}
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                        <div className="nitro-catalog-mobile-currency">
+                            <div className="nitro-catalog-coin">
+                                <span>{LocalizeShortNumber(purse?.credits ?? 0)}</span>
+                                <LayoutCurrencyIcon type={-1} />
+                            </div>
+                            {displayedCurrencies.map((type) => (
+                                <div key={type} className="nitro-catalog-coin">
+                                    <span>{LocalizeShortNumber(purse?.activityPoints?.get(type) ?? 0)}</span>
+                                    <LayoutCurrencyIcon type={type} />
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                    <NitroCardTabsView classNames={['nitro-catalog-tabs-shell']} innerRef={tabsShellRef} justifyContent="start">
+                        {rootNode &&
+                            rootNode.children.length > 0 &&
+                            rootNode.children.map((child, index) => {
                                 if (!child.isVisible) return null;
-                                // Generate a unique key using the index of the map function
-                                const uniqueKey = `${child.pageId}-${index}`;
+                                if (index === 0 && getSwfTabLabel(child.localization).toLowerCase().includes('rari')) return null;
+
                                 return (
                                     <NitroCardTabsItemView
-                                        key={uniqueKey}
+                                        key={`${child.pageId}-${child.pageName}-${index}`}
                                         isActive={child.isActive}
-                                        onClick={(event) => {
+                                        title={child.localization}
+                                        onClick={() => {
                                             if (searchResult) setSearchResult(null);
+
                                             activateNode(child);
                                         }}
                                     >
-                                        <Flex gap={GetConfiguration('catalog.tab.icons') ? 1 : 0} alignItems="center">
-                                            {GetConfiguration('catalog.tab.icons') && <CatalogIconView icon={child.iconId} />}
-                                            {child.localization}
-                                        </Flex>
+                                        <div className="flex items-center gap-1">
+                                            {child.iconId > 0 && <CatalogIconView icon={child.iconId} className="nitro-catalog-tab-icon" />}
+                                            <span className="nitro-catalog-tab-label">{getSwfTabLabel(child.localization)}</span>
+                                        </div>
                                     </NitroCardTabsItemView>
                                 );
                             })}
-                    </NitroCardTabsView>
-                    <NitroCardContentView>
-                        {isFavoriteActive ?  (
-                            <>
-                                {favourites !== null && favourites.length > 0 ? (
-                                    <div className='row gx-2'>
-                                        {favourites.map((favourite) => 
-                                            <div key={favourite.pageId} className='col-md-4 mb-2'>
-                                                <div className='card' style={{backgroundColor: "#f0f0f0"}}>
-                                                    <div className='card-body'>
-                                                        <CatalogIconView icon={favourite.icon}></CatalogIconView>
-                                                        <div className='text-dark' style={{display: "inline-block", float: "right"}}>{
-                                                            favourite.name.length > 20 ? favourite.name.substring(0,20)+"..." : favourite.name
-                                                        }</div>
-                                                        <div className='row gx-1 mt-2'>
-                                                            <div className='col-md-6'>
-                                                                <button className='btn btn-success btn-sm w-100' onClick={() => goToFavouritePage(favourite.pageId)}>Ir</button>
-                                                            </div>
-                                                            <div className='col-md-6'>
-                                                                <button className='btn btn-danger btn-sm w-100' onClick={() => deleteFavouritePage(favourite.pageId)}>Borrar</button>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
-                                ):(
-                                    <div className='alert bg-danger text-white text-center'>
-                                        <b>No tienes ninguna categoría seleccionada como favorita.</b>
-                                    </div>
-                                )}
-                            </>
-                        ):(
-                            <Grid>
-                                { !navigationHidden &&
-                                    <Column size={ 3 } overflow="hidden">
-                                        { activeNodes && (activeNodes.length > 0) &&
-                                            <CatalogNavigationView node={ activeNodes[0] } /> }
-                                    </Column> }
-                                <Column size={ !navigationHidden ? 9 : 12 } overflow="hidden">
-                                    { GetCatalogLayout(currentPage, () => setNavigationHidden(true)) }
-                                </Column>
-                            </Grid>
+                        {isMod && (
+                            <NitroCardTabsItemView classNames={['nitro-catalog-admin-tab']} isActive={adminMode} onClick={() => setAdminMode(!adminMode)}>
+                                <FaCog className={`text-[10px] ${adminMode ? 'animate-spin' : ''}`} style={adminMode ? { animationDuration: '3s' } : {}} />
+                            </NitroCardTabsItemView>
                         )}
+                    </NitroCardTabsView>
+                    <div className="nitro-catalog-swf-header">
+                        <div
+                            className="nitro-catalog-swf-header-bg"
+                            style={currentPage?.localization?.getImage(0) ? { backgroundImage: `url(${currentPage.localization.getImage(0)})` } : undefined}
+                        />
+                        <div className="nitro-catalog-swf-header-icon">
+                            <CatalogIconView icon={activeCatalogNode?.iconId ?? rootNode?.iconId ?? 1} />
+                        </div>
+                        <div className="nitro-catalog-swf-header-copy">
+                            <div className="nitro-catalog-swf-header-title">
+                                {currentType === CatalogType.BUILDER
+                                    ? LocalizeText('builder.header.title')
+                                    : getSwfTabLabel(activeCatalogNode?.localization ?? LocalizeText('catalog.title'))}
+                            </div>
+                            {currentType === CatalogType.BUILDER ? (
+                                <div className="nitro-catalog-swf-header-description">{LocalizeText('builder.header.status.membership')}</div>
+                            ) : (
+                                <div
+                                    className="nitro-catalog-swf-header-description"
+                                    dangerouslySetInnerHTML={{ __html: SanitizeHtml(currentPage?.localization?.getText(0) || '') }}
+                                />
+                            )}
+                        </div>
+                    </div>
+                    <NitroCardContentView classNames={['nitro-catalog-content-shell']}>
+                        <CatalogBuildersClubStatusView />
+                        <div className={`nitro-catalog-stage ${navigationHidden ? 'is-navigation-hidden' : ''}`}>
+                            {!navigationHidden && (
+                                <div className="nitro-catalog-sidebar">
+                                    <div className="nitro-catalog-search-shell">
+                                        <CatalogSearchView />
+                                    </div>
+                                    <div className="nitro-catalog-navigation-shell">
+                                        {activeNodes && activeNodes.length > 0 && <CatalogNavigationView node={activeNodes[0]} />}
+                                    </div>
+                                </div>
+                            )}
+                            <div className="nitro-catalog-layout-shell">
+                                <div className="nitro-catalog-layout-header-shell">
+                                    <CatalogBreadcrumbView />
+                                    <div className="nitro-catalog-layout-hero">
+                                        {!!currentPage?.localization?.getImage(0) && <img alt="" src={currentPage.localization.getImage(0)} />}
+                                    </div>
+                                </div>
+                                <div className="nitro-catalog-layout-container">{GetCatalogLayout(currentPage, () => setNavigationHidden(true))}</div>
+                            </div>
+                        </div>
                     </NitroCardContentView>
-                </NitroCardView> }
+                </NitroCardView>
+            )}
+            <CatalogAdminManagerView />
+            <CatalogAdminPageEditView />
+            <CatalogAdminOfferEditView />
             <CatalogGiftView />
             <MarketplacePostOfferView />
         </>
     );
-}
+};
+
+export const CatalogView: FC<{}> = () => {
+    const { catalogLocalizationVersion = 0 } = useCatalogData();
+
+    const isCatalogAdmin = useHasPermission('acc_catalogfurni');
+
+    return (
+        <CatalogStudioProvider active={ isCatalogAdmin }>
+            <CatalogAdminProvider>
+                <div className="hidden" data-catalog-localization-version={catalogLocalizationVersion} />
+                <CatalogViewInner />
+            </CatalogAdminProvider>
+        </CatalogStudioProvider>
+    );
+};

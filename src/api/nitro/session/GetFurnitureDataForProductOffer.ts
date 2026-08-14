@@ -1,14 +1,11 @@
-import { CatalogPageMessageProductData, FurnitureType, IFurnitureData } from '@nitrots/nitro-renderer';
-import { GetSessionDataManager } from './GetSessionDataManager';
+import { CatalogPageMessageProductData, FurnitureType, GetSessionDataManager, IFurnitureData } from '@nitrots/nitro-renderer';
 
-export function GetFurnitureDataForProductOffer(offer: CatalogPageMessageProductData): IFurnitureData
-{
-    if(!offer) return null;
+export function GetFurnitureDataForProductOffer(offer: CatalogPageMessageProductData): IFurnitureData {
+    if (!offer) return null;
 
     let furniData: IFurnitureData = null;
 
-    switch((offer.productType.toUpperCase()))
-    {
+    switch (offer.productType as FurnitureType) {
         case FurnitureType.FLOOR:
             furniData = GetSessionDataManager().getFloorItemData(offer.furniClassId);
             break;

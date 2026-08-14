@@ -1,39 +1,128 @@
-import { FC } from "react";
-import { FaCaretDown, FaCaretUp } from "react-icons/fa";
-import { ICatalogNode } from "../../../../api";
-import { Base, LayoutGridItem, Text } from "../../../../common";
-import { useCatalog } from "../../../../hooks";
-import { CatalogIconView } from "../catalog-icon/CatalogIconView";
-import { CatalogNavigationSetView } from "./CatalogNavigationSetView";
+import { FC, useCallback, useRef, useState } from 'react';
+import { FaArrowsAlt, FaCaretDown, FaCaretUp, FaPlus, FaTrash } from 'react-icons/fa';
+import { ICatalogNode, LocalizeText } from '../../../../api';
+import { useCatalogActions } from '../../../../hooks';
+import { useCatalogAdmin } from '../../CatalogAdminContext';
+import { CatalogIconView } from '../catalog-icon/CatalogIconView';
+import { CatalogNavigationSetView } from './CatalogNavigationSetView';
 
 export interface CatalogNavigationItemViewProps {
-  node: ICatalogNode;
-  child?: boolean;
+    node: ICatalogNode;
+    child?: boolean;
 }
 
-export const CatalogNavigationItemView: FC<CatalogNavigationItemViewProps> = (
-  props
-) => {
-  const { node = null, child = false } = props;
-  const { activateNode = null } = useCatalog();
+export const CatalogNavigationItemView: FC<CatalogNavigationItemViewProps> = (props) => {
+    const { node = null, child = false } = props;
+    const { activateNode = null } = useCatalogActions();
+    const catalogAdmin = useCatalogAdmin();
+    const adminMode = catalogAdmin?.adminMode ?? false;
+    const [isDragOver, setIsDragOver] = useState(false);
+    const dragRef = useRef<HTMLDivElement>(null);
+    // Strip only technical SWF-style suffixes; labels such as
+    // "Flags (Wall)" or "Forest (Blue)" are meaningful catalog names.
+    const swfLabel = (node?.localization || '').replace(/\s*\((?:BC|Hot)\)\s*$/i, '').trim();
 
-  return (
-    <Base className="nitro-catalog-navigation-section">
-      <LayoutGridItem gap={1} column={false} itemActive={node.isActive} onClick={(event) => activateNode(node)} className={child ? "inset" : ""} >
-        <CatalogIconView icon={node.iconId} />
-        <Text grow truncate variant="white">
-          {node.localization}
-        </Text>
-        {node.isBranch && (
-          <>
-            {node.isOpen && <FaCaretUp className="fa-icon" />}
-            {!node.isOpen && <FaCaretDown className="fa-icon" />}
-          </>
-        )}
-      </LayoutGridItem>
-      {node.isOpen && node.isBranch && (
-        <CatalogNavigationSetView node={node} child={true} />
-      )}
-    </Base>
-  );
+    const handleDragStart = useCallback(
+        (e: React.DragEvent) => {
+            if (!adminMode) return;
+
+            e.dataTransfer.setData('text/plain', JSON.stringify({ pageId: node.pageId, parentId: node.parent?.pageId ?? -1 }));
+            e.dataTransfer.effectAllowed = 'move';
+        },
+        [adminMode, node]
+    );
+
+    const handleDragOver = useCallback(
+        (e: React.DragEvent) => {
+            if (!adminMode) return;
+
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            setIsDragOver(true);
+        },
+        [adminMode]
+    );
+
+    const handleDragLeave = useCallback(() => {
+        setIsDragOver(false);
+    }, []);
+
+    const handleDrop = useCallback(
+        (e: React.DragEvent) => {
+            if (!adminMode) return;
+
+            e.preventDefault();
+            setIsDragOver(false);
+
+            try {
+                const data = JSON.parse(e.dataTransfer.getData('text/plain'));
+
+                if (data.pageId && data.pageId !== node.pageId) {
+                    // Drop onto a branch = reparent under this node
+                    // Drop onto a leaf = reorder as sibling
+                    const targetParentId = node.isBranch ? node.pageId : (node.parent?.pageId ?? -1);
+                    const targetIndex = node.isBranch ? 0 : (node.parent?.children?.indexOf(node) ?? 0);
+
+                    catalogAdmin?.reorderPage(data.pageId, targetParentId, targetIndex);
+                }
+            } catch (err) {
+                // Invalid drag data
+            }
+        },
+        [adminMode, node, catalogAdmin]
+    );
+
+    return (
+        <div className={`nitro-catalog-navigation-node ${child ? 'is-child' : ''}`}>
+            <div
+                ref={dragRef}
+                className={`nitro-catalog-navigation-item group/nav ${node.isActive ? 'is-active' : ''} ${node.isBranch ? 'is-branch' : 'is-leaf'} ${node.isOpen ? 'is-open' : ''} ${isDragOver ? 'is-drag-over' : ''}`}
+                draggable={adminMode}
+                onClick={() => activateNode(node)}
+                onDragLeave={adminMode ? handleDragLeave : undefined}
+                onDragOver={adminMode ? handleDragOver : undefined}
+                onDragStart={adminMode ? handleDragStart : undefined}
+                onDrop={adminMode ? handleDrop : undefined}
+            >
+                {adminMode && (
+                    <FaArrowsAlt className="nitro-catalog-navigation-drag text-[7px] text-muted cursor-grab shrink-0 opacity-0 group-hover/nav:opacity-60" />
+                )}
+                <div className="nitro-catalog-navigation-icon">
+                    <CatalogIconView icon={node.iconId} />
+                </div>
+                <span className="nitro-catalog-navigation-label" title={adminMode ? `Page ID: ${node.pageId}` : undefined}>
+                    {swfLabel}
+                </span>
+                {adminMode && (
+                    <div className="nitro-catalog-navigation-admin flex items-center gap-1 opacity-0 group-hover/nav:opacity-100 transition-opacity">
+                        <FaPlus
+                            className="text-[8px] text-success hover:text-green-800"
+                            title={LocalizeText('catalog.admin.create.subpage')}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                catalogAdmin.setCreatingPage(true);
+                                catalogAdmin.setEditingRootPage(false);
+                                catalogAdmin.setEditingPageNode(node);
+                                catalogAdmin.setEditingPageData(true);
+                            }}
+                        />
+                        <FaTrash
+                            className="text-[8px] text-danger hover:text-red-700"
+                            title={LocalizeText('catalog.admin.delete.page')}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                if (confirm(LocalizeText('catalog.admin.delete.page.confirm', ['name'], [node.localization]))) {
+                                    catalogAdmin.deletePage(node.pageId);
+                                }
+                            }}
+                        />
+                    </div>
+                )}
+                {node.isBranch && (
+                    <span className="nitro-catalog-navigation-caret text-[9px] text-muted shrink-0">{node.isOpen ? <FaCaretUp /> : <FaCaretDown />}</span>
+                )}
+            </div>
+            {node.isOpen && node.isBranch && <CatalogNavigationSetView child={true} node={node} />}
+        </div>
+    );
 };

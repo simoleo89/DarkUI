@@ -1,8 +1,7 @@
 import { ICatalogPage } from './ICatalogPage';
 import { IProduct } from './IProduct';
 
-export interface IPurchasableOffer
-{
+export interface IPurchasableOffer {
     activate(): void;
     clubLevel: number;
     page: ICatalogPage;
@@ -22,4 +21,7 @@ export interface IPurchasableOffer
     localizationDescription: string;
     isLazy: boolean;
     products: IProduct[];
+    itemIds: string;
+    haveOffer: boolean;
+    clone?(): IPurchasableOffer;
 }

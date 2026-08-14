@@ -1,41 +1,52 @@
 import { CfhChatlogData, CfhChatlogEvent, GetCfhChatlogMessageComposer } from '@nitrots/nitro-renderer';
 import { FC, useEffect, useState } from 'react';
-import { SendMessageComposer } from '../../../../api';
-import { NitroCardContentView, NitroCardHeaderView, NitroCardView } from '../../../../common';
+import { FaSpinner } from 'react-icons/fa';
+import { LocalizeText, SendMessageComposer } from '../../../../api';
+import { DraggableWindowPosition, NitroCardContentView, NitroCardHeaderView, NitroCardView } from '../../../../common';
 import { useMessageEvent } from '../../../../hooks';
 import { ChatlogView } from '../chatlog/ChatlogView';
 
-interface CfhChatlogViewProps
-{
+interface CfhChatlogViewProps {
     issueId: number;
     onCloseClick(): void;
 }
 
-export const CfhChatlogView: FC<CfhChatlogViewProps> = props =>
-{
+export const CfhChatlogView: FC<CfhChatlogViewProps> = (props) => {
     const { onCloseClick = null, issueId = null } = props;
-    const [ chatlogData, setChatlogData ] = useState<CfhChatlogData>(null);
+    const [chatlogData, setChatlogData] = useState<CfhChatlogData>(null);
 
-    useMessageEvent<CfhChatlogEvent>(CfhChatlogEvent, event =>
-    {
+    useMessageEvent<CfhChatlogEvent>(CfhChatlogEvent, (event) => {
         const parser = event.getParser();
-    
-        if(!parser || parser.data.issueId !== issueId) return;
-    
+
+        if (!parser || parser.data.issueId !== issueId) return;
+
         setChatlogData(parser.data);
     });
 
-    useEffect(() =>
-    {
+    useEffect(() => {
         SendMessageComposer(new GetCfhChatlogMessageComposer(issueId));
-    }, [ issueId ]);
+    }, [issueId]);
 
     return (
-        <NitroCardView className="nitro-mod-tools-chatlog" theme="primary-slim">
-            <NitroCardHeaderView headerText={ 'Issue Chatlog' } onCloseClick={ onCloseClick } />
-            <NitroCardContentView className="text-black">
-                { chatlogData && <ChatlogView records={ [ chatlogData.chatRecord ] } /> }
+        <NitroCardView
+            className="nitro-mod-tools-chatlog min-w-0 w-[min(520px,calc(100vw-16px))] max-w-[calc(100vw-16px)] max-h-[calc(100vh-16px)]"
+            theme="primary-slim"
+            windowPosition={DraggableWindowPosition.TOP_LEFT}
+        >
+            <NitroCardHeaderView
+                headerText={LocalizeText('modtools.tickets.cfh.chatlog.title', ['issueId'], [issueId.toString()])}
+                onCloseClick={onCloseClick}
+            />
+            <NitroCardContentView className="text-black" gap={1}>
+                {chatlogData ? (
+                    <ChatlogView records={[chatlogData.chatRecord]} />
+                ) : (
+                    <div className="flex flex-col items-center justify-center gap-2 py-8 opacity-50 text-sm">
+                        <FaSpinner className="animate-spin" size={22} />
+                        <span>{LocalizeText('modtools.user.chatlog.loading')}</span>
+                    </div>
+                )}
             </NitroCardContentView>
         </NitroCardView>
     );
-}
+};

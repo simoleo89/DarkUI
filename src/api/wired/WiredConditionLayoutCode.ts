@@ -1,5 +1,4 @@
-export class WiredConditionlayout
-{
+export class WiredConditionlayout {
     public static STATES_MATCH: number = 0;
     public static FURNIS_HAVE_AVATARS: number = 1;
     public static ACTOR_IS_ON_FURNI: number = 2;
@@ -26,4 +25,27 @@ export class WiredConditionlayout
     public static NOT_ACTOR_WEARING_EFFECT: number = 23;
     public static DATE_RANGE_ACTIVE: number = 24;
     public static ACTOR_HAS_HANDITEM: number = 25;
+    public static MOVEMENT_VALIDATION: number = 26;
+    public static COUNTER_TIME_MATCHES: number = 27;
+    public static USER_PERFORMS_ACTION: number = 28;
+    public static HAS_ALTITUDE: number = 29;
+    public static NOT_USER_PERFORMS_ACTION: number = 30;
+    public static NOT_ACTOR_HAS_HANDITEM: number = 31;
+    public static TRIGGERER_MATCH: number = 32;
+    public static NOT_TRIGGERER_MATCH: number = 33;
+    public static TEAM_HAS_SCORE: number = 34;
+    public static TEAM_HAS_RANK: number = 35;
+    public static MATCH_TIME: number = 36;
+    public static MATCH_DATE: number = 37;
+    public static ACTOR_DIR: number = 38;
+    public static SLC_QUANTITY: number = 39;
+    public static HAS_VAR: number = 40;
+    public static NEG_HAS_VAR: number = 41;
+    public static VAR_VAL_MATCH: number = 42;
+    public static VAR_AGE_MATCH: number = 43;
+    public static NO_BATTLEBANZAI: number = 44;
+    public static USER_ON_FURNI_WITH_STATE: number = 45;
+    public static TRG_FURNI_ADJACENT_STATE: number = 46;
+    public static CHEST_HAS_ITEMS: number = 47;
+    public static CHEST_HAS_ITEM_TYPE: number = 48;
 }

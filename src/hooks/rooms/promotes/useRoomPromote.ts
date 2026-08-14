@@ -3,13 +3,11 @@ import { useState } from 'react';
 import { useBetween } from 'use-between';
 import { useMessageEvent } from '../../events';
 
-const useRoomPromoteState = () =>
-{
-    const [ promoteInformation, setPromoteInformation ] = useState<RoomEventMessageParser>(null);
-    const [ isExtended, setIsExtended ] = useState<boolean>(false);
+const useRoomPromoteState = () => {
+    const [promoteInformation, setPromoteInformation] = useState<RoomEventMessageParser>(null);
+    const [isExtended, setIsExtended] = useState<boolean>(false);
 
-    useMessageEvent<RoomEventEvent>(RoomEventEvent, event =>
-    {
+    useMessageEvent<RoomEventEvent>(RoomEventEvent, (event) => {
         const parser = event.getParser();
 
         if (!parser) return;
@@ -18,6 +16,6 @@ const useRoomPromoteState = () =>
     });
 
     return { promoteInformation, isExtended, setPromoteInformation, setIsExtended };
-}
+};
 
 export const useRoomPromote = () => useBetween(useRoomPromoteState);

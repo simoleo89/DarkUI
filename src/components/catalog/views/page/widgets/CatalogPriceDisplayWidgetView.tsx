@@ -1,37 +1,36 @@
 import { FC } from 'react';
 import { FaPlus } from 'react-icons/fa';
 import { IPurchasableOffer } from '../../../../../api';
-import { Flex, LayoutCurrencyIcon, Text } from '../../../../../common';
-import { useCatalog } from '../../../../../hooks';
+import { LayoutCurrencyIcon, Text } from '../../../../../common';
+import { useCatalogUiState } from '../../../../../hooks';
 
-interface CatalogPriceDisplayWidgetViewProps
-{
+interface CatalogPriceDisplayWidgetViewProps {
     offer: IPurchasableOffer;
     separator?: boolean;
 }
 
-export const CatalogPriceDisplayWidgetView: FC<CatalogPriceDisplayWidgetViewProps> = props =>
-{
+export const CatalogPriceDisplayWidgetView: FC<CatalogPriceDisplayWidgetViewProps> = (props) => {
     const { offer = null, separator = false } = props;
-    const { purchaseOptions = null } = useCatalog();
+    const { purchaseOptions = null } = useCatalogUiState();
     const { quantity = 1 } = purchaseOptions;
 
-    if(!offer) return null;
+    if (!offer) return null;
 
     return (
-        <>
-            { (offer.priceInCredits > 0) &&
-                <Flex alignItems="center" gap={ 1 }>
-                    <Text variant="white" bold>{ (offer.priceInCredits * quantity) }</Text>
-                    <LayoutCurrencyIcon type={ -1 } />
-                </Flex> }
-            { separator && (offer.priceInCredits > 0) && (offer.priceInActivityPoints > 0) &&
-                <FaPlus size="xs" color="black" className="fa-icon" /> }
-            { (offer.priceInActivityPoints > 0) &&
-                <Flex alignItems="center" gap={ 1 }>
-                    <Text variant="white" bold>{ (offer.priceInActivityPoints * quantity) }</Text>
-                    <LayoutCurrencyIcon type={ offer.activityPointType } />
-                </Flex> }
-        </>
+        <div className="nitro-catalog-swf-price-display">
+            {offer.priceInCredits > 0 && (
+                <div className="nitro-catalog-swf-price-pill">
+                    <Text className="nitro-catalog-swf-price-text">{offer.priceInCredits * quantity}</Text>
+                    <LayoutCurrencyIcon type={-1} />
+                </div>
+            )}
+            {separator && offer.priceInCredits > 0 && offer.priceInActivityPoints > 0 && <FaPlus className="nitro-catalog-swf-price-plus" />}
+            {offer.priceInActivityPoints > 0 && (
+                <div className="nitro-catalog-swf-price-pill">
+                    <Text className="nitro-catalog-swf-price-text">{offer.priceInActivityPoints * quantity}</Text>
+                    <LayoutCurrencyIcon type={offer.activityPointType} />
+                </div>
+            )}
+        </div>
     );
-}
+};

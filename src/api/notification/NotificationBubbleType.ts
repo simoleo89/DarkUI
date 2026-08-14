@@ -1,5 +1,4 @@
-export class NotificationBubbleType 
-{
+export class NotificationBubbleType {
     public static FRIENDOFFLINE: string = 'friendoffline';
     public static FRIENDONLINE: string = 'friendonline';
     public static THIRDPARTYFRIENDOFFLINE: string = 'thirdpartyfriendoffline';
@@ -11,9 +10,11 @@ export class NotificationBubbleType
     public static RESPECT: string = 'respect';
     public static CLUB: string = 'club';
     public static SOUNDMACHINE: string = 'soundmachine';
+    public static SOUNDBOARD: string = 'soundboard';
     public static PETLEVEL: string = 'petlevel';
     public static CLUBGIFT: string = 'clubgift';
     public static BUYFURNI: string = 'buyfurni';
     public static VIP: string = 'vip';
     public static ROOMMESSAGESPOSTED: string = 'roommessagesposted';
+    public static MENTION: string = 'mention';
 }

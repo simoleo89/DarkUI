@@ -1,69 +1,76 @@
-import { FC, MouseEvent, useEffect, useState } from 'react';
-import { Overlay, Popover } from 'react-bootstrap';
-import { Base, Flex, Grid, NitroCardContentView } from '../../../../common';
-import { FaCommentDots } from "react-icons/fa";
+import * as Popover from '@radix-ui/react-popover';
+import { FC, useState } from 'react';
+import { CHAT_TEXT_SIZES, ChatTextSize, getChatTextSizeLabel, getStoredChatTextSize, setStoredChatTextSize } from './chatTextSize';
 
-interface ChatInputStyleSelectorViewProps
-{
+interface ChatInputStyleSelectorViewProps {
     chatStyleId: number;
     chatStyleIds: number[];
     selectChatStyleId: (styleId: number) => void;
 }
 
-export const ChatInputStyleSelectorView: FC<ChatInputStyleSelectorViewProps> = props =>
-{
+export const ChatInputStyleSelectorView: FC<ChatInputStyleSelectorViewProps> = (props) => {
     const { chatStyleId = 0, chatStyleIds = null, selectChatStyleId = null } = props;
-    const [ target, setTarget ] = useState<(EventTarget & HTMLElement)>(null);
-    const [ selectorVisible, setSelectorVisible ] = useState(false);
+    const [selectorVisible, setSelectorVisible] = useState(false);
+    const [chatTextSize, setChatTextSize] = useState<ChatTextSize>(() => getStoredChatTextSize());
 
-    const selectStyle = (styleId: number) =>
-    {
+    const selectStyle = (styleId: number) => {
         selectChatStyleId(styleId);
         setSelectorVisible(false);
-    }
+    };
 
-    const toggleSelector = (event: MouseEvent<HTMLElement>) =>
-    {
-        let visible = false;
-
-        setSelectorVisible(prevValue =>
-        {
-            visible = !prevValue;
-
-            return visible;
-        });
-
-        if(visible) setTarget((event.target as (EventTarget & HTMLElement)));
-    }
-
-    useEffect(() =>
-    {
-        if(selectorVisible) return;
-
-        setTarget(null);
-    }, [ selectorVisible ]);
+    const selectTextSize = (size: ChatTextSize) => {
+        setChatTextSize(size);
+        setStoredChatTextSize(size);
+    };
 
     return (
-        <>
-            <div className='nitro-chat-bubble-icon-container icon chatstyles-icon nitro-pointer' onClick={ toggleSelector }></div>
-            <Overlay show={ selectorVisible } target={ target } placement="top">
-                <Popover className="nitro-chat-style-selector-container image-rendering-pixelated" style={{border: "0px !important"}}>
-                    <NitroCardContentView overflow="hidden" className="nitro-tooltip-bg">
-                        <Grid columnCount={ 3 } overflow="auto">
-                            { chatStyleIds && (chatStyleIds.length > 0) && chatStyleIds.map((styleId) =>
-                            {
-                                return (
-                                    <Flex center pointer key={ styleId } className="bubble-parent-container" onClick={ event => selectStyle(styleId) }>
-                                        <Base key={ styleId } className="bubble-container">
-                                            <Base className={ `chat-bubble bubble-${ styleId }` }>&nbsp;</Base>
-                                        </Base>
-                                    </Flex>
-                                );
-                            }) }
-                        </Grid>
-                    </NitroCardContentView>
-                </Popover>
-            </Overlay>
-        </>
+        <Popover.Root open={selectorVisible} onOpenChange={setSelectorVisible}>
+            <Popover.Trigger asChild>
+                <div className="swf-chat-style-trigger flex items-center cursor-pointer select-none" aria-label="Stili chat">
+                    <svg className="swf-chat-style-arrow shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" />
+                    </svg>
+                    <div className="swf-chat-style-icon" />
+                </div>
+            </Popover.Trigger>
+            <Popover.Portal>
+                <Popover.Content
+                    side="top"
+                    align="start"
+                    sideOffset={9}
+                    className="swf-chat-style-menu"
+                >
+                    <div className="swf-chat-style-menu-grid">
+                        {chatStyleIds &&
+                            chatStyleIds.length > 0 &&
+                            chatStyleIds.map((styleId) => (
+                                <button
+                                    key={styleId}
+                                    type="button"
+                                    className={`swf-chat-style-option ${chatStyleId === styleId ? 'is-active' : ''}`}
+                                    onClick={() => selectStyle(styleId)}
+                                >
+                                    <span className="swf-chat-style-preview bubble-container">
+                                        <span className={`chat-bubble bubble-${styleId}`} />
+                                    </span>
+                                </button>
+                            ))}
+                    </div>
+                    <div className="swf-chat-font-row">
+                        <span className="swf-chat-font-label">Dimensione del testo</span>
+                        {CHAT_TEXT_SIZES.map((size) => (
+                            <button
+                                key={size}
+                                type="button"
+                                className={`swf-chat-font-option ${chatTextSize === size ? 'is-active' : ''}`}
+                                onClick={() => selectTextSize(size)}
+                            >
+                                {getChatTextSizeLabel(size)}
+                            </button>
+                        ))}
+                    </div>
+                </Popover.Content>
+            </Popover.Portal>
+        </Popover.Root>
     );
-}
+};

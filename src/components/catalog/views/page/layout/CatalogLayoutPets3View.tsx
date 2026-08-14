@@ -1,27 +1,37 @@
 import { FC } from 'react';
-import { Base } from '../../../../../common/Base';
-import { Column } from '../../../../../common/Column';
-import { Flex } from '../../../../../common/Flex';
+import { FaPaw } from 'react-icons/fa';
+import { SanitizeHtml } from '../../../../../api';
 import { CatalogLayoutProps } from './CatalogLayout.types';
 
-export const CatalogLayoutPets3View: FC<CatalogLayoutProps> = props =>
-{
+export const CatalogLayoutPets3View: FC<CatalogLayoutProps> = (props) => {
     const { page = null } = props;
 
     const imageUrl = page.localization.getImage(1);
-    
+
     return (
-        <Column grow className="text-white p-2" overflow="hidden">
-            <Flex alignItems="center" gap={ 2 }>
-                { imageUrl && <img alt="" src={ imageUrl } /> }
-                <Base className="fs-5" dangerouslySetInnerHTML={ { __html: page.localization.getText(1) } } />
-            </Flex>
-            <Column grow alignItems="center" overflow="auto">
-                <Base dangerouslySetInnerHTML={ { __html: page.localization.getText(2) } } />
-            </Column>
-            <Flex alignItems="center">
-                <Base className="fw-bold " dangerouslySetInnerHTML={ { __html: page.localization.getText(3) } } />
-            </Flex>
-        </Column>
+        <div className="flex flex-col h-full gap-2">
+            {/* Header card */}
+            <div className="flex items-center gap-3 p-2.5 bg-white rounded border-2 border-card-grid-item-border">
+                {imageUrl && <img alt="" className="w-[60px] h-[60px] object-contain shrink-0" src={imageUrl} />}
+                <div>
+                    <div className="flex items-center gap-1.5 mb-0.5">
+                        <FaPaw className="text-primary text-xs" />
+                        <span className="text-sm font-bold" dangerouslySetInnerHTML={{ __html: SanitizeHtml(page.localization.getText(1)) }} />
+                    </div>
+                </div>
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 overflow-auto bg-white rounded border-2 border-card-grid-item-border p-3">
+                <div className="text-[11px] leading-relaxed" dangerouslySetInnerHTML={{ __html: SanitizeHtml(page.localization.getText(2)) }} />
+            </div>
+
+            {/* Footer */}
+            {!!page.localization.getText(3) && (
+                <div className="p-2 bg-card-grid-item rounded border border-card-grid-item-border">
+                    <span className="text-[11px] font-bold" dangerouslySetInnerHTML={{ __html: SanitizeHtml(page.localization.getText(3)) }} />
+                </div>
+            )}
+        </div>
     );
-}
+};

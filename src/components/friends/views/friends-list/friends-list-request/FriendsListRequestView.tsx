@@ -2,15 +2,14 @@ import { FC } from 'react';
 import { useFriends } from '../../../../../hooks';
 import { FriendsListRequestItemView } from './FriendsListRequestItemView';
 
-export const FriendsListRequestView: FC<{}> = props =>
-{
-    const { requests = [], requestResponse = null } = useFriends();
-
-    if(!requests.length) return null;
+export const FriendsListRequestView: FC = () => {
+    const { requests = [] } = useFriends();
 
     return (
-        <div>
-            { requests.map((request, index) => <FriendsListRequestItemView key={ index } request={ request } />) }
+        <div className="hfl-requests">
+            <div className="hfl-request-list">
+                {requests.map((request) => <FriendsListRequestItemView key={request.id} request={request} />)}
+            </div>
         </div>
     );
-}
+};

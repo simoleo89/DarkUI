@@ -1,44 +1,96 @@
 import { FC, useEffect, useState } from 'react';
-import { GetSessionDataManager, LocalizeText, WiredFurniType } from '../../../../api';
-import { Column, Flex, Text } from '../../../../common';
+import { LocalizeText, WiredFurniType } from '../../../../api';
+import { Text } from '../../../../common';
 import { useWired } from '../../../../hooks';
+import { NitroInput } from '../../../../layout';
 import { WiredTriggerBaseView } from './WiredTriggerBaseView';
 
-export const WiredTriggerAvatarSaysSomethingView: FC<{}> = props =>
-{
-    const [ message, setMessage ] = useState('');
-    const [ triggererAvatar, setTriggererAvatar ] = useState(-1);
+const MATCH_CONTAINS = 0;
+const MATCH_EXACT = 1;
+const MATCH_ALL = 2;
+
+export const WiredTriggerAvatarSaysSomethingView: FC<{}> = () => {
+    const [message, setMessage] = useState('');
+    const [matchMode, setMatchMode] = useState(MATCH_CONTAINS);
+    const [hideMessage, setHideMessage] = useState(false);
+    const [ownerOnly, setOwnerOnly] = useState(false);
     const { trigger = null, setStringParam = null, setIntParams = null } = useWired();
 
-    const save = () =>
-    {
+    const save = () => {
         setStringParam(message);
-        setIntParams([ triggererAvatar ]);
-    }
+        setIntParams([matchMode, hideMessage ? 1 : 0, ownerOnly ? 1 : 0]);
+    };
 
-    useEffect(() =>
-    {
-        setMessage(trigger.stringData);
-        setTriggererAvatar((trigger.intData.length > 0) ? trigger.intData[0] : 0);
-    }, [ trigger ]);
-    
+    useEffect(() => {
+        setMessage(trigger?.stringData ?? '');
+        setMatchMode(trigger?.intData?.length > 0 ? trigger.intData[0] : MATCH_CONTAINS);
+        setHideMessage(trigger?.intData?.length > 1 ? trigger.intData[1] === 1 : false);
+        setOwnerOnly(trigger?.intData?.length > 2 ? trigger.intData[2] === 1 : false);
+    }, [trigger]);
+
     return (
-        <WiredTriggerBaseView requiresFurni={ WiredFurniType.STUFF_SELECTION_OPTION_NONE } hasSpecialInput={ true } save={ save }>
-            <Column gap={ 1 }>
-                <Text bold>{ LocalizeText('wiredfurni.params.whatissaid') }</Text>
-                <input type="text" className="form-control form-control-sm" value={ message } onChange={ event => setMessage(event.target.value) } />
-            </Column>
-            <Column gap={ 1 }>
-                <Text bold>{ LocalizeText('wiredfurni.params.picktriggerer') }</Text>
-                <Flex alignItems="center" gap={ 1 }>
-                    <input className="form-check-input" type="radio" name="triggererAvatar" id="triggererAvatar0" checked={ (triggererAvatar === 0) } onChange={ event => setTriggererAvatar(0) } />
-                    <Text>{ LocalizeText('wiredfurni.params.anyavatar') }</Text>
-                </Flex>
-                <Flex alignItems="center" gap={ 1 }>
-                    <input className="form-check-input" type="radio" name="triggererAvatar" id="triggererAvatar1" checked={ (triggererAvatar === 1) } onChange={ event => setTriggererAvatar(1) } />
-                    <Text>{ GetSessionDataManager().userName }</Text>
-                </Flex>
-            </Column>
+        <WiredTriggerBaseView hasSpecialInput={true} requiresFurni={WiredFurniType.STUFF_SELECTION_OPTION_NONE} save={save}>
+            <div className="flex flex-col gap-1">
+                <Text bold>{LocalizeText('wiredfurni.params.whatissaid')}</Text>
+                <NitroInput type="text" value={message} onChange={(event) => setMessage(event.target.value)} />
+            </div>
+            <div className="flex flex-col gap-1">
+                <div className="flex items-center gap-1">
+                    <input
+                        checked={matchMode === MATCH_CONTAINS}
+                        className="form-check-input"
+                        id="sayMatchContains"
+                        name="sayMatchMode"
+                        type="radio"
+                        onChange={() => setMatchMode(MATCH_CONTAINS)}
+                    />
+                    <Text>{LocalizeText('wiredfurni.params.chatcontains')}</Text>
+                </div>
+                <div className="flex items-center gap-1">
+                    <input
+                        checked={matchMode === MATCH_EXACT}
+                        className="form-check-input"
+                        id="sayMatchExact"
+                        name="sayMatchMode"
+                        type="radio"
+                        onChange={() => setMatchMode(MATCH_EXACT)}
+                    />
+                    <Text>{LocalizeText('wiredfurni.params.exactmatch')}</Text>
+                </div>
+                <div className="flex items-center gap-1">
+                    <input
+                        checked={matchMode === MATCH_ALL}
+                        className="form-check-input"
+                        id="sayMatchAll"
+                        name="sayMatchMode"
+                        type="radio"
+                        onChange={() => setMatchMode(MATCH_ALL)}
+                    />
+                    <Text>{LocalizeText('wiredfurni.params.allmatch')}</Text>
+                </div>
+            </div>
+            <div className="flex flex-col gap-1">
+                <div className="flex items-center gap-1">
+                    <input
+                        checked={hideMessage}
+                        className="form-check-input"
+                        id="sayHideMessage"
+                        type="checkbox"
+                        onChange={(event) => setHideMessage(event.target.checked)}
+                    />
+                    <Text>{LocalizeText('wiredfurni.params.chat.hide')}</Text>
+                </div>
+                <div className="flex items-center gap-1">
+                    <input
+                        checked={ownerOnly}
+                        className="form-check-input"
+                        id="sayOwnerOnly"
+                        type="checkbox"
+                        onChange={(event) => setOwnerOnly(event.target.checked)}
+                    />
+                    <Text>{LocalizeText('wiredfurni.params.chat.onlyowner')}</Text>
+                </div>
+            </div>
         </WiredTriggerBaseView>
     );
-}
+};

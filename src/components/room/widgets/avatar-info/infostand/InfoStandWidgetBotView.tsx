@@ -3,53 +3,56 @@ import { FaTimes } from 'react-icons/fa';
 import { AvatarInfoUser, LocalizeText } from '../../../../../api';
 import { Column, Flex, LayoutAvatarImageView, LayoutBadgeImageView, Text } from '../../../../../common';
 
-interface InfoStandWidgetBotViewProps
-{
+interface InfoStandWidgetBotViewProps {
     avatarInfo: AvatarInfoUser;
     onClose: () => void;
 }
 
-export const InfoStandWidgetBotView: FC<InfoStandWidgetBotViewProps> = props =>
-{
+export const InfoStandWidgetBotView: FC<InfoStandWidgetBotViewProps> = (props) => {
     const { avatarInfo = null, onClose = null } = props;
 
-    if(!avatarInfo) return null;
+    if (!avatarInfo) return null;
 
     return (
         <Column className="nitro-infostand rounded">
-            <Column overflow="visible" className="container-fluid content-area" gap={ 1 }>
-                <Column gap={ 1 }>
-                    <Flex alignItems="center" justifyContent="between" gap={ 1 }>
-                        <Text variant="white" small wrap>{ avatarInfo.name }</Text>
-                        <FaTimes className="cursor-pointer fa-icon" onClick={ onClose } />
-                    </Flex>
-                    <hr className="m-0" />
-                </Column>
-                <Column gap={ 1 }>
-                    <Flex gap={ 1 }>
-                        <Column fullWidth className="body-image bot">
-                            <LayoutAvatarImageView figure={ avatarInfo.figure } direction={ 4 } />
-                        </Column>
-                        <Column grow center gap={ 0 }>
-                            { (avatarInfo.badges.length > 0) && avatarInfo.badges.map(result =>
-                            {
-                                return <LayoutBadgeImageView key={ result } badgeCode={ result } showInfo={ true } />;
-                            }) }
-                        </Column>
-                    </Flex>
-                    <hr className="m-0" />
-                </Column>
-                <Flex alignItems="center" className="bg-light-dark rounded py-1 px-2">
-                    <Text fullWidth wrap textBreak variant="white" small className="motto-content">{ avatarInfo.motto }</Text>
-                </Flex>
-                { (avatarInfo.carryItem > 0) &&
-                    <Column gap={ 1 }>
-                        <hr className="m-0" />
-                        <Text variant="white" small wrap>
-                            { LocalizeText('infostand.text.handitem', [ 'item' ], [ LocalizeText('handitem' + avatarInfo.carryItem) ]) }
+            <Column className="container-fluid content-area" gap={1} overflow="visible">
+                <div className="flex flex-col gap-1">
+                    <Flex alignItems="center" gap={1} justifyContent="between">
+                        <Text small wrap variant="white">
+                            {avatarInfo.name}
                         </Text>
-                    </Column> }
+                        <FaTimes className="cursor-pointer fa-icon" onClick={onClose} />
+                    </Flex>
+                    <hr className="m-0" />
+                </div>
+                <div className="flex flex-col gap-1">
+                    <div className="flex gap-1">
+                        <Column fullWidth className="body-image bot">
+                            <LayoutAvatarImageView direction={4} figure={avatarInfo.figure} />
+                        </Column>
+                        <Column center grow gap={0}>
+                            {avatarInfo.badges.length > 0 &&
+                                avatarInfo.badges.map((result) => {
+                                    return <LayoutBadgeImageView key={result} badgeCode={result} showInfo={true} />;
+                                })}
+                        </Column>
+                    </div>
+                    <hr className="m-0" />
+                </div>
+                <Flex alignItems="center" className="bg-light-dark rounded py-1 px-2">
+                    <Text fullWidth small textBreak wrap className="min-h-[18px]" variant="white">
+                        {avatarInfo.motto}
+                    </Text>
+                </Flex>
+                {avatarInfo.carryItem > 0 && (
+                    <div className="flex flex-col gap-1">
+                        <hr className="m-0" />
+                        <Text small wrap variant="white">
+                            {LocalizeText('infostand.text.handitem', ['item'], [LocalizeText('handitem' + avatarInfo.carryItem)])}
+                        </Text>
+                    </div>
+                )}
             </Column>
         </Column>
     );
-}
+};

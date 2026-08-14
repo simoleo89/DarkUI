@@ -1,44 +1,23 @@
-import { FC, useState, useEffect } from 'react';
+import { FC } from 'react';
 import { Column } from '../../common';
-import { useIsPlaying } from '../../hooks';
 import { OfferView } from '../catalog/views/targeted-offer/OfferView';
 import { GroupRoomInformationView } from '../groups/views/GroupRoomInformationView';
 import { NotificationCenterView } from '../notification-center/NotificationCenterView';
 import { PurseView } from '../purse/PurseView';
 import { MysteryBoxExtensionView } from '../room/widgets/mysterybox/MysteryBoxExtensionView';
 import { RoomPromotesWidgetView } from '../room/widgets/room-promotes/RoomPromotesWidgetView';
-import RadioView from './RadioView';
-import { GetConfiguration } from '../../api';
 
-export const RightSideView: FC<{}> = () => {
-    const [isVisible, setIsVisible] = useState(true);
-    const [radioEnabled, setRadioEnabled] = useState<boolean>(false);
-    const { isPlaying } = useIsPlaying();
-
-    useEffect(() => {
-        const fetchRadioConfig = async () => {
-            const enabled = GetConfiguration('radioplayer');
-            setRadioEnabled(enabled);
-        };
-
-        fetchRadioConfig();
-    }, []);
-
+export const RightSideView: FC<{}> = (props) => {
     return (
-        <>
-            {isVisible && !isPlaying && (
-                <div className="nitro-right-side animate__animated animate__backInDown">
-                    <Column position="relative" gap={1}>
-                        <PurseView />
-                        {radioEnabled && <RadioView />}
-                        <GroupRoomInformationView />
-                        <MysteryBoxExtensionView />
-                        <OfferView />
-                        <RoomPromotesWidgetView />
-                        <NotificationCenterView />
-                    </Column>
-                </div>
-            )}
-        </>
+        <div className="absolute top-0 right-1 z-10 w-[min(230px,calc(100vw-16px))] sm:w-[min(230px,calc(100vw-20px))] h-[calc(100%-55px)] pointer-events-none">
+            <Column gap={1} position="relative" alignItems="end" className="w-full">
+                <PurseView />
+                <GroupRoomInformationView />
+                <MysteryBoxExtensionView />
+                <OfferView />
+                <RoomPromotesWidgetView />
+                <NotificationCenterView />
+            </Column>
+        </div>
     );
 };

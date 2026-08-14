@@ -1,5 +1,4 @@
-export class BuilderFurniPlaceableStatus
-{
+export class BuilderFurniPlaceableStatus {
     public static OKAY: number = 0;
     public static MISSING_OFFER: number = 1;
     public static FURNI_LIMIT_REACHED: number = 2;
@@ -7,4 +6,5 @@ export class BuilderFurniPlaceableStatus
     public static NOT_ROOM_OWNER: number = 4;
     public static GUILD_ROOM: number = 5;
     public static VISITORS_IN_ROOM: number = 6;
+    public static NOT_GROUP_ADMIN: number = 7;
 }

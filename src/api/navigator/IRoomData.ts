@@ -1,8 +1,7 @@
 import { IRoomChatSettings } from './IRoomChatSettings';
 import { IRoomModerationSettings } from './IRoomModerationSettings';
 
-export interface IRoomData
-{
+export interface IRoomData {
     roomId: number;
     roomName: string;
     roomDescription: string;
@@ -11,6 +10,13 @@ export interface IRoomData
     tags: string[];
     tradeState: number;
     allowWalkthrough: boolean;
+    allowUnderpass: boolean;
+    muteAllPets: boolean;
+    leaveOnDoorTileEnabled: boolean;
+    idleSleepEnabled: boolean;
+    idleSleepTimeoutSeconds: number;
+    idleAutokickEnabled: boolean;
+    idleAutokickTimeoutSeconds: number;
     lockState: number;
     password: string;
     allowPets: boolean;

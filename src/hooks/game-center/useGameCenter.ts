@@ -1,83 +1,99 @@
-import { Game2AccountGameStatusMessageEvent, Game2AccountGameStatusMessageParser, GameConfigurationData, GameListMessageEvent, GameStatusMessageEvent, GetGameListMessageComposer, LoadGameUrlEvent } from '@nitrots/nitro-renderer';
-import { useEffect, useState } from 'react';
+import {
+    Game2AccountGameStatusMessageEvent,
+    Game2AccountGameStatusMessageParser,
+    GameConfigurationData,
+    GameListMessageEvent,
+    GameStatusMessageEvent,
+    GetGameListMessageComposer,
+    LoadGameUrlEvent,
+    RoomEnterEvent
+} from '@nitrots/nitro-renderer';
+import { useCallback, useEffect, useState } from 'react';
 import { useBetween } from 'use-between';
-import { SendMessageComposer, VisitDesktop } from '../../api';
+import { GetRoomSession, SendMessageComposer, setSnowWarReturnRoom, VisitDesktop } from '../../api';
 import { useMessageEvent } from '../events';
 
-const useGameCenterState = () => 
-{
-    const [ isVisible, setIsVisible ] = useState<boolean>(false);
-    const [ games, setGames ] = useState<GameConfigurationData[]>(null);
-    const [ selectedGame, setSelectedGame ] = useState<GameConfigurationData>(null);
-    const [ accountStatus, setAccountStatus ] = useState<Game2AccountGameStatusMessageParser>(null);
-    const [ gameOffline, setGameOffline ] = useState<boolean>(false);
-    const [ gameURL, setGameURL ] = useState<string>(null);
+const useGameCenterState = () => {
+    const [isVisible, setIsVisible] = useState<boolean>(false);
+    const [games, setGames] = useState<GameConfigurationData[]>(null);
+    const [selectedGame, setSelectedGame] = useState<GameConfigurationData>(null);
+    const [accountStatus, setAccountStatus] = useState<Game2AccountGameStatusMessageParser>(null);
+    const [gameOffline, setGameOffline] = useState<boolean>(false);
+    const [gameURL, setGameURL] = useState<string>(null);
 
-    useMessageEvent<GameListMessageEvent>(GameListMessageEvent, event => 
-    {
+    useMessageEvent<GameListMessageEvent>(GameListMessageEvent, (event) => {
         let parser = event.getParser();
 
-        if(!parser || parser && !parser.games.length) return;
+        if (!parser || (parser && !parser.games.length)) return;
 
         setSelectedGame(parser.games[0]);
 
         setGames(parser.games);
     });
 
-    useMessageEvent<Game2AccountGameStatusMessageEvent>(Game2AccountGameStatusMessageEvent, event => 
-    {
+    useMessageEvent<Game2AccountGameStatusMessageEvent>(Game2AccountGameStatusMessageEvent, (event) => {
         let parser = event.getParser();
 
-        if(!parser) return;
+        if (!parser) return;
 
         setAccountStatus(parser);
     });
 
-    useMessageEvent<GameStatusMessageEvent>(GameStatusMessageEvent, event => 
-    {
+    useMessageEvent<GameStatusMessageEvent>(GameStatusMessageEvent, (event) => {
         let parser = event.getParser();
 
-        if(!parser) return;
+        if (!parser) return;
 
         setGameOffline(parser.isInMaintenance);
-    })
+    });
 
-    useMessageEvent<LoadGameUrlEvent>(LoadGameUrlEvent, event => 
-    {
+    // Entering a room while the hub is open (e.g. the SnowWar arena editor
+    // forwarding the player) must close the fullscreen hub overlay, or the
+    // loaded room sits invisible behind it. Normal hub usage never enters a
+    // room (opening it calls VisitDesktop), so this only fires on forwards.
+    const onRoomEnter = useCallback(() => setIsVisible(false), []);
+
+    useMessageEvent<RoomEnterEvent>(RoomEnterEvent, onRoomEnter);
+
+    useMessageEvent<LoadGameUrlEvent>(LoadGameUrlEvent, (event) => {
         let parser = event.getParser();
 
-        if(!parser) return;
+        if (!parser) return;
 
-        switch(parser.gameTypeId) 
-        {
+        switch (parser.gameTypeId) {
             case 2:
-                return console.log('snowwar')
+                // SnowWar runs natively (SnowWarView + useSnowWar), not in an
+                // iframe — the server drives it via the SnowWar packets.
+                return;
             default:
                 return setGameURL(parser.url);
         }
     });
 
-    useEffect(()=>
-    {
-        if(isVisible) 
-        {
+    useEffect(() => {
+        if (isVisible) {
+            // Remember the room we're leaving so SnowWar can return us to it on
+            // exit; VisitDesktop() below drops the room session. Overwrites any
+            // stale value (null when we open the hub from outside a room).
+            setSnowWarReturnRoom(GetRoomSession()?.roomId ?? null);
             SendMessageComposer(new GetGameListMessageComposer());
             VisitDesktop();
-        }
-        else 
-        {
+        } else {
             // dispose or wtv
         }
-    },[ isVisible ]);
+    }, [isVisible]);
 
     return {
-        isVisible, setIsVisible,
+        isVisible,
+        setIsVisible,
         games,
         accountStatus,
-        selectedGame, setSelectedGame,
+        selectedGame,
+        setSelectedGame,
         gameOffline,
-        gameURL, setGameURL
-    }
-}
+        gameURL,
+        setGameURL
+    };
+};
 
 export const useGameCenter = () => useBetween(useGameCenterState);

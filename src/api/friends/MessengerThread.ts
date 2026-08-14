@@ -4,10 +4,10 @@ import { MessengerGroupType } from './MessengerGroupType';
 import { MessengerThreadChat } from './MessengerThreadChat';
 import { MessengerThreadChatGroup } from './MessengerThreadChatGroup';
 
-export class MessengerThread
-{
+export class MessengerThread {
     public static MESSAGE_RECEIVED: string = 'MT_MESSAGE_RECEIVED';
     public static THREAD_ID: number = 0;
+    private static MAX_CHATS: number = 500;
 
     private _threadId: number;
     private _participant: MessengerFriend;
@@ -15,8 +15,7 @@ export class MessengerThread
     private _lastUpdated: Date;
     private _unreadCount: number;
 
-    constructor(participant: MessengerFriend)
-    {
+    constructor(participant: MessengerFriend) {
         this._threadId = ++MessengerThread.THREAD_ID;
         this._participant = participant;
         this._groups = [];
@@ -24,33 +23,60 @@ export class MessengerThread
         this._unreadCount = 0;
     }
 
-    public addMessage(senderId: number, message: string, secondsSinceSent: number = 0, extraData: string = null, type: number = 0): MessengerThreadChat
-    {
-        const isGroupChat = (senderId < 0 && extraData);
+    public addMessage(senderId: number, message: string, secondsSinceSent: number = 0, extraData: string = null, type: number = 0): MessengerThreadChat {
+        const isGroupChat = senderId < 0 && extraData;
         const userId = isGroupChat ? GetGroupChatData(extraData).userId : senderId;
 
         const group = this.getLastGroup(userId);
 
-        if(!group) return;
+        if (!group) return;
 
-        if(isGroupChat) group.type = MessengerGroupType.GROUP_CHAT;
+        if (isGroupChat) group.type = MessengerGroupType.GROUP_CHAT;
 
         const chat = new MessengerThreadChat(senderId, message, secondsSinceSent, extraData, type);
 
         group.addChat(chat);
+        this.pruneChats();
 
         this._lastUpdated = new Date();
-        
+
         this._unreadCount++;
 
         return chat;
     }
 
-    private getLastGroup(userId: number): MessengerThreadChatGroup
-    {
-        let group = this._groups[(this._groups.length - 1)];
+    public getChat(chatId: number): MessengerThreadChat {
+        for (const group of this._groups) {
+            const chat = group.chats.find((existingChat) => existingChat.id === chatId);
 
-        if(group && (group.userId === userId)) return group;
+            if (chat) return chat;
+        }
+
+        return null;
+    }
+
+    private pruneChats(): void {
+        let totalChats = this._groups.reduce((total, current) => total + current.chats.length, 0);
+
+        while (totalChats > MessengerThread.MAX_CHATS) {
+            const firstGroup = this._groups[0];
+
+            if (!firstGroup) break;
+
+            if (firstGroup.chats.length) firstGroup.chats.shift();
+
+            if (!firstGroup.chats.length) {
+                this._groups.shift();
+            }
+
+            totalChats--;
+        }
+    }
+
+    private getLastGroup(userId: number): MessengerThreadChatGroup {
+        let group = this._groups[this._groups.length - 1];
+
+        if (group && group.userId === userId) return group;
 
         group = new MessengerThreadChatGroup(userId);
 
@@ -59,38 +85,39 @@ export class MessengerThread
         return group;
     }
 
-    public setRead(): void
-    {
+    public setRead(): void {
         this._unreadCount = 0;
     }
 
-    public get threadId(): number
-    {
+    public setMessagesReadFromUser(userId: number): void {
+        for (const group of this._groups) {
+            if (group.userId !== userId) continue;
+
+            for (const chat of group.chats) chat.setStatus(MessengerThreadChat.READ);
+        }
+    }
+
+    public get threadId(): number {
         return this._threadId;
     }
 
-    public get participant(): MessengerFriend
-    {
+    public get participant(): MessengerFriend {
         return this._participant;
     }
 
-    public get groups(): MessengerThreadChatGroup[]
-    {
+    public get groups(): MessengerThreadChatGroup[] {
         return this._groups;
     }
 
-    public get lastUpdated(): Date
-    {
+    public get lastUpdated(): Date {
         return this._lastUpdated;
     }
 
-    public get unreadCount(): number
-    {
+    public get unreadCount(): number {
         return this._unreadCount;
     }
 
-    public get unread(): boolean
-    {
-        return (this._unreadCount > 0);
+    public get unread(): boolean {
+        return this._unreadCount > 0;
     }
 }

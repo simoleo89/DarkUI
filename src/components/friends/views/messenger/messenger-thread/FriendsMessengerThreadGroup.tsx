@@ -1,73 +1,177 @@
-import { FC, useMemo } from 'react';
-import { GetGroupChatData, GetSessionDataManager, LocalizeText, MessengerGroupType, MessengerThread, MessengerThreadChat, MessengerThreadChatGroup } from '../../../../../api';
-import { Base, Flex, LayoutAvatarImageView } from '../../../../../common';
+import { GetSessionDataManager } from '@nitrots/nitro-renderer';
+import { FC, useEffect, useMemo, useState } from 'react';
+import {
+    GetConfigurationValue,
+    FriendlyTime,
+    GetGroupChatData,
+    LocalizeText,
+    MessengerGroupType,
+    MessengerThread,
+    MessengerThreadChat,
+    MessengerThreadChatGroup
+} from '../../../../../api';
+import MessengerNotificationIcon from '../../../../../assets/images/friends/messenger_notification_icon.png';
+import { LayoutAvatarImageView } from '../../../../../common';
+import { useFriends } from '../../../../../hooks';
+import { resolveAvatarFigure } from '../../friends-list/resolveAvatarFigure';
+import { MessengerMessageStatusView } from '../MessengerMessageStatusView';
+import { getMessageStatusPresentation } from './messageStatus.helpers';
 
-export const FriendsMessengerThreadGroup: FC<{ thread: MessengerThread, group: MessengerThreadChatGroup }> = props =>
-{
-    const { thread = null, group = null } = props;
+type HabbiconFrame = { x: number; y: number; width: number; height: number };
+const habbiconFrameCache = new Map<string, Map<number, HabbiconFrame>>();
 
-    const groupChatData = useMemo(() => ((group.type === MessengerGroupType.GROUP_CHAT) && GetGroupChatData(group.chats[0].extraData)), [ group ]);
+const MessengerMessageTime: FC<{ date: Date }> = ({ date }) => {
+    const [now, setNow] = useState(() => Date.now());
 
-    const isOwnChat = useMemo(() =>
-    {
-        if(!thread || !group) return false;
-        
-        if((group.type === MessengerGroupType.PRIVATE_CHAT) && (group.userId === GetSessionDataManager().userId)) return true;
+    useEffect(() => {
+        const timer = window.setInterval(() => setNow(Date.now()), 60000);
 
-        if(groupChatData && group.chats.length && (groupChatData.userId === GetSessionDataManager().userId)) return true;
+        return () => window.clearInterval(timer);
+    }, []);
 
-        return false;
-    }, [ thread, group, groupChatData ]);
+    const elapsedSeconds = Math.max(0, Math.round((now - date.getTime()) / 1000));
 
-    if(!thread || !group) return null;
-    
-    if(!group.userId)
-    {
+    return <div className="messenger-message-time">{FriendlyTime.format(elapsedSeconds, '.ago', 1)}</div>;
+};
+
+const MessengerHabbiconMessage: FC<{ id: number; assetRoot: string }> = ({ id, assetRoot }) => {
+    const [frame, setFrame] = useState<HabbiconFrame>(null);
+
+    useEffect(() => {
+        if (!assetRoot) return;
+
+        const cached = habbiconFrameCache.get(assetRoot);
+
+        if (cached) {
+            setFrame(cached.get(id) || null);
+            return;
+        }
+
+        let disposed = false;
+
+        void fetch(`${assetRoot}habbicons.json`)
+            .then((response) => (response.ok ? response.json() : null))
+            .then((data) => {
+                if (disposed || !Array.isArray(data?.habbicons)) return;
+
+                const frames = new Map<number, HabbiconFrame>(
+                    data.habbicons.map((entry: any) => [
+                        Number(entry.id),
+                        {
+                            x: Number(entry.x) || 0,
+                            y: Number(entry.y) || 0,
+                            width: Number(entry.width) || 42,
+                            height: Number(entry.height) || 42
+                        }
+                    ])
+                );
+
+                habbiconFrameCache.set(assetRoot, frames);
+                setFrame(frames.get(id) || null);
+            });
+
+        return () => {
+            disposed = true;
+        };
+    }, [assetRoot, id]);
+
+    if (!frame) return null;
+
+    return (
+        <span
+            className="messenger-habbicon-message"
+            style={{
+                width: frame.width,
+                height: frame.height,
+                backgroundImage: `url(${assetRoot}habbicons_spritesheet.png)`,
+                backgroundPosition: `-${frame.x}px -${frame.y}px`
+            }}
+        />
+    );
+};
+
+export const FriendsMessengerThreadGroup: FC<{ thread: MessengerThread; group: MessengerThreadChatGroup }> = ({ thread, group }) => {
+    const { getFriend = null } = useFriends();
+    const groupChatData = useMemo(() => group.type === MessengerGroupType.GROUP_CHAT && GetGroupChatData(group.chats[0].extraData), [group]);
+    const own =
+        (group.type === MessengerGroupType.PRIVATE_CHAT && group.userId === GetSessionDataManager().userId) ||
+        (!!groupChatData && group.chats.length > 0 && groupChatData.userId === GetSessionDataManager().userId);
+
+    if (!group.userId)
         return (
             <>
-                { group.chats.map((chat, index) =>
-                {
-                    return (
-                        <Flex key={ index } fullWidth gap={ 2 } justifyContent="start">
-                            <Base className="w-100 text-break">
-                                { (chat.type === MessengerThreadChat.SECURITY_NOTIFICATION) &&
-                                    <Flex gap={ 2 } alignItems="center" className="bg-light rounded mb-2 px-2 py-1 small text-muted">
-                                        <Base className="nitro-friends-spritesheet icon-warning flex-shrink-0" />
-                                        <Base>{ chat.message }</Base>
-                                    </Flex> }
-                                { (chat.type === MessengerThreadChat.ROOM_INVITE) &&
-                                    <Flex gap={ 2 } alignItems="center" className="bg-light rounded mb-2 px-2 py-1 small text-black">
-                                        <Base className="messenger-notification-icon flex-shrink-0" />
-                                        <Base>{ (LocalizeText('messenger.invitation') + ' ') }{ chat.message }</Base>
-                                    </Flex> }
-                            </Base>
-                        </Flex>
-                    );
-                }) }
+                {group.chats.map((chat, index) =>
+                    chat.type === MessengerThreadChat.ROOM_INVITE ? (
+                        <div key={index} className="messenger-notification">
+                            <img src={MessengerNotificationIcon} alt="" />
+                            <span>
+                                {LocalizeText('messenger.invitation')} {chat.message}
+                            </span>
+                        </div>
+                    ) : chat.type === MessengerThreadChat.STATUS_NOTIFICATION ? (
+                        <div key={index} className="messenger-status-notification">
+                            {chat.message}
+                        </div>
+                    ) : null
+                )}
             </>
         );
-    }
-    
+
+    const friend = getFriend?.(thread.participant.id);
+    const name = own ? GetSessionDataManager().userName : groupChatData?.username || thread.participant.name;
+    const figure = own
+        ? GetSessionDataManager().figure
+        : groupChatData?.figure || resolveAvatarFigure(friend?.figure || thread.participant.figure, friend?.gender ?? thread.participant.gender);
+    const assetRoot = (() => {
+        const root = GetConfigurationValue<string>('habbicons.asset.root', '');
+        const hash = GetConfigurationValue<string>('habbicons.asset.hash', '');
+
+        if (!root) return '';
+
+        const normalizedRoot = root.endsWith('/') ? root : `${root}/`;
+
+        return hash ? `${normalizedRoot}${hash}/` : normalizedRoot;
+    })();
+    const renderMessage = (message: string) => {
+        const match = /^\uE000(\d+)$/.exec(message || '');
+
+        if (!match || !assetRoot) return message;
+
+        return <MessengerHabbiconMessage id={Number(match[1])} assetRoot={assetRoot} />;
+    };
+
     return (
-        <Flex fullWidth justifyContent={ isOwnChat ? 'end' : 'start' } gap={ 2 }>
-            <Base shrink className="message-avatar">
-                { ((group.type === MessengerGroupType.PRIVATE_CHAT) && !isOwnChat) &&
-                    <LayoutAvatarImageView figure={ thread.participant.figure } direction={ 2 } /> }
-                { (groupChatData && !isOwnChat) &&
-                    <LayoutAvatarImageView figure={ groupChatData.figure } direction={ 2 } /> }
-            </Base>
-            <Base className={ 'bg-light text-black border-radius mb-2 rounded py-1 px-2 messages-group-' + (isOwnChat ? 'right' : 'left') }>
-                <Base className="fw-bold">
-				<Base className="small text-muted">{ group.chats[0].date.toLocaleTimeString() }</Base>
-                    { isOwnChat && GetSessionDataManager().userName }
-                    { !isOwnChat && (groupChatData ? groupChatData.username : thread.participant.name) }
-                </Base>
-                { group.chats.map((chat, index) => <Base key={ index } className="text-break">{ chat.message }</Base>) }
-            </Base>
-            { isOwnChat &&
-                <Base shrink className="message-avatar">
-                    <LayoutAvatarImageView figure={ GetSessionDataManager().figure } direction={ 4 } />
-                </Base> }
-        </Flex>
+        <div className={`messenger-message-row${own ? ' own' : ''}`}>
+            {own && (
+                <div className="message-avatar">
+                    <LayoutAvatarImageView direction={2} figure={figure} />
+                </div>
+            )}
+            <div className="messenger-message-body">
+                <div className="messenger-message-name">{name}:</div>
+                <div className="messenger-message-bubble">
+                    {group.chats.map((chat, index) =>
+                        !chat.showTranslation ? (
+                            <div key={index}>{renderMessage(chat.message)}</div>
+                        ) : (
+                            <div key={index} className="messenger-translation-block">
+                                <div>
+                                    <b>original:</b> {chat.originalMessage || chat.message}
+                                </div>
+                                <div>
+                                    <b>translate:</b> {chat.translatedMessage || chat.message}
+                                </div>
+                            </div>
+                        )
+                    )}
+                </div>
+                <MessengerMessageTime date={group.chats[0].date} />
+            </div>
+            {!own && (
+                <div className="message-avatar">
+                    <LayoutAvatarImageView direction={4} figure={figure} />
+                </div>
+            )}
+        </div>
     );
-}
+};

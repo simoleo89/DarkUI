@@ -1,7 +1,6 @@
-import { ILinkEventTracker, RoomSessionEvent } from '@nitrots/nitro-renderer';
+import { AddLinkEventTracker, ILinkEventTracker, RemoveLinkEventTracker, RoomSessionEvent } from '@nitrots/nitro-renderer';
 import { FC, useEffect, useState } from 'react';
-import { AddEventLinkTracker, RemoveLinkEventTracker } from '../../api';
-import { useCamera, useRoomSessionManagerEvent } from '../../hooks';
+import { useCamera, useNitroEvent } from '../../hooks';
 import { CameraWidgetCaptureView } from './views/CameraWidgetCaptureView';
 import { CameraWidgetCheckoutView } from './views/CameraWidgetCheckoutView';
 import { CameraWidgetEditorView } from './views/editor/CameraWidgetEditorView';
@@ -11,16 +10,21 @@ const MODE_CAPTURE: number = 1;
 const MODE_EDITOR: number = 2;
 const MODE_CHECKOUT: number = 3;
 
-export const CameraWidgetView: FC<{}> = props =>
-{
-    const [ mode, setMode ] = useState<number>(MODE_NONE);
-    const [ base64Url, setSavedPictureUrl ] = useState<string>(null);
-    const { availableEffects = [], selectedPictureIndex = -1, cameraRoll = [], setCameraRoll = null, myLevel = 0, price = { credits: 0, duckets: 0, publishDucketPrice: 0 }} = useCamera();
+export const CameraWidgetView: FC<{}> = (props) => {
+    const [mode, setMode] = useState<number>(MODE_NONE);
+    const [base64Url, setSavedPictureUrl] = useState<string>(null);
+    const {
+        availableEffects = [],
+        selectedPictureIndex = -1,
+        setSelectedPictureIndex = null,
+        cameraRoll = [],
+        setCameraRoll = null,
+        myLevel = 0,
+        price = { credits: 0, duckets: 0, publishDucketPrice: 0 }
+    } = useCamera();
 
-    const processAction = (type: string) =>
-    {
-        switch(type)
-        {
+    const processAction = (type: string) => {
+        switch (type) {
             case 'close':
                 setMode(MODE_NONE);
                 return;
@@ -28,40 +32,33 @@ export const CameraWidgetView: FC<{}> = props =>
                 setMode(MODE_EDITOR);
                 return;
             case 'delete':
-                setCameraRoll(prevValue =>
-                {
-                    const clone = [ ...prevValue ];
-
-                    clone.splice(selectedPictureIndex, 1);
-
-                    return clone;
-                });
+                setCameraRoll((prevValue) => prevValue.filter((_, index) => index !== selectedPictureIndex));
+                // Without this the index keeps pointing at the slot the deleted
+                // photo vacated (now a different picture, or past the end) — move
+                // the selection back one so the preview stays in sync.
+                if (setSelectedPictureIndex) setSelectedPictureIndex((prev) => (prev > 0 ? prev - 1 : 0));
                 return;
             case 'editor_cancel':
                 setMode(MODE_CAPTURE);
                 return;
         }
-    }
+    };
 
-    const checkoutPictureUrl = (pictureUrl: string) =>
-    {
+    const checkoutPictureUrl = (pictureUrl: string) => {
         setSavedPictureUrl(pictureUrl);
         setMode(MODE_CHECKOUT);
-    }
+    };
 
-    useRoomSessionManagerEvent<RoomSessionEvent>(RoomSessionEvent.ENDED, event => setMode(MODE_NONE));
+    useNitroEvent<RoomSessionEvent>(RoomSessionEvent.ENDED, (event) => setMode(MODE_NONE));
 
-    useEffect(() =>
-    {
+    useEffect(() => {
         const linkTracker: ILinkEventTracker = {
-            linkReceived: (url: string) =>
-            {
+            linkReceived: (url: string) => {
                 const parts = url.split('/');
-        
-                if(parts.length < 2) return;
-        
-                switch(parts[1])
-                {
+
+                if (parts.length < 2) return;
+
+                switch (parts[1]) {
                     case 'show':
                         setMode(MODE_CAPTURE);
                         return;
@@ -69,9 +66,8 @@ export const CameraWidgetView: FC<{}> = props =>
                         setMode(MODE_NONE);
                         return;
                     case 'toggle':
-                        setMode(prevValue =>
-                        {
-                            if(!prevValue) return MODE_CAPTURE;
+                        setMode((prevValue) => {
+                            if (!prevValue) return MODE_CAPTURE;
                             else return MODE_NONE;
                         });
                         return;
@@ -80,18 +76,36 @@ export const CameraWidgetView: FC<{}> = props =>
             eventUrlPrefix: 'camera/'
         };
 
-        AddEventLinkTracker(linkTracker);
+        AddLinkEventTracker(linkTracker);
 
         return () => RemoveLinkEventTracker(linkTracker);
     }, []);
 
-    if(mode === MODE_NONE) return null;
+    if (mode === MODE_NONE) return null;
 
     return (
         <>
-            { (mode === MODE_CAPTURE) && <CameraWidgetCaptureView onClose={ () => processAction('close') } onEdit={ () => processAction('edit') } onDelete={ () => processAction('delete') } /> }
-            { (mode === MODE_EDITOR) && <CameraWidgetEditorView picture={ cameraRoll[selectedPictureIndex] } myLevel={ myLevel } onClose={ () => processAction('close') } onCancel={ () => processAction('editor_cancel') } onCheckout={ checkoutPictureUrl } availableEffects={ availableEffects } /> }
-            { (mode === MODE_CHECKOUT) && <CameraWidgetCheckoutView base64Url={ base64Url } onCloseClick={ () => processAction('close') } onCancelClick={ () => processAction('editor_cancel') } price={ price }></CameraWidgetCheckoutView> }
+            {mode === MODE_CAPTURE && (
+                <CameraWidgetCaptureView onClose={() => processAction('close')} onDelete={() => processAction('delete')} onEdit={() => processAction('edit')} />
+            )}
+            {mode === MODE_EDITOR && (
+                <CameraWidgetEditorView
+                    availableEffects={availableEffects}
+                    myLevel={myLevel}
+                    picture={cameraRoll[selectedPictureIndex]}
+                    onCancel={() => processAction('editor_cancel')}
+                    onCheckout={checkoutPictureUrl}
+                    onClose={() => processAction('close')}
+                />
+            )}
+            {mode === MODE_CHECKOUT && (
+                <CameraWidgetCheckoutView
+                    base64Url={base64Url}
+                    price={price}
+                    onCancelClick={() => processAction('editor_cancel')}
+                    onCloseClick={() => processAction('close')}
+                ></CameraWidgetCheckoutView>
+            )}
         </>
     );
-}
+};

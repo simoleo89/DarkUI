@@ -1,27 +1,31 @@
 import { FC } from 'react';
-import { GetConfiguration, LocalizeFormattedNumber, LocalizeText } from '../../../api';
-import { Flex, LayoutCurrencyIcon, Text } from '../../../common';
+import { GetConfigurationValue, LocalizeFormattedNumber, localizeWithFallback } from '../../../api';
+import { Flex, Text } from '../../../common';
 
-interface SeasonalViewProps
-{
+interface SeasonalViewProps {
     type: number;
     amount: number;
 }
 
-export const SeasonalView: FC<SeasonalViewProps> = props =>
-{
+export const SeasonalView: FC<SeasonalViewProps> = (props) => {
     const { type = -1, amount = -1 } = props;
+    const seasonalColor = GetConfigurationValue<string>('currency.seasonal.color', 'blue');
+    const formattedAmount = LocalizeFormattedNumber(amount);
+    const iconUrl = GetConfigurationValue<string>('currency.asset.icon.url', '').replace('%type%', type.toString());
 
     return (
-        <Flex fullWidth justifyContent="between" className={ 'nitro-purse-seasonal-currency nitro-notification ' + GetConfiguration<boolean>('currency.seasonal.color') }>
-            <Flex fullWidth>
-                <Text bold truncate fullWidth className="seasonal-padding seasonal-bold">{ LocalizeText(`purse.seasonal.currency.${ type }`) }</Text>
-                <Text bold truncate variant="white" className="seasonal-amount text-end">{ LocalizeFormattedNumber(amount) }</Text>
-                <Flex className="nitro-seasonal-box seasonal-padding">
-                    <LayoutCurrencyIcon type={ type } />
-                </Flex>        
-            </Flex>            
+        <Flex fullWidth justifyContent="between" className={`nitro-purse-seasonal-currency nitro-notification ${seasonalColor}`}>
+            <Flex fullWidth className="seasonal-row seasonal-padding">
+                <Text truncate fullWidth variant="white" className="seasonal-text-padding seasonal-text seasonal-bold">
+                    {localizeWithFallback(`purse.seasonal.currency.${type}`, '')}
+                </Text>
+                <Text variant="white" className="seasonal-amount text-end" title={formattedAmount}>
+                    {formattedAmount}
+                </Text>
+                <Flex className="nitro-seasonal-box seasonal-image-padding">
+                    <img src={iconUrl} alt="" className="seasonal-image" />
+                </Flex>
+            </Flex>
         </Flex>
-
     );
-}
+};

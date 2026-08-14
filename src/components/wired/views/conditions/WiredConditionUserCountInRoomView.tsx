@@ -1,52 +1,48 @@
 import { FC, useEffect, useState } from 'react';
-import ReactSlider from 'react-slider';
 import { LocalizeText, WiredFurniType } from '../../../../api';
-import { Column, Text } from '../../../../common';
+import { Slider, Text } from '../../../../common';
 import { useWired } from '../../../../hooks';
+import { WiredSourcesSelector } from '../WiredSourcesSelector';
 import { WiredConditionBaseView } from './WiredConditionBaseView';
 
-export const WiredConditionUserCountInRoomView: FC<{}> = props =>
-{
-    const [ min, setMin ] = useState(1);
-    const [ max, setMax ] = useState(1);
+export const WiredConditionUserCountInRoomView: FC<{}> = (props) => {
+    const [min, setMin] = useState(1);
+    const [max, setMax] = useState(0);
     const { trigger = null, setIntParams = null } = useWired();
+    const [userSource, setUserSource] = useState<number>(() => {
+        if (trigger?.intData?.length > 2) return trigger.intData[2];
+        return 0;
+    });
 
-    const save = () => setIntParams([ min, max ]);
+    const save = () => setIntParams([min, max, userSource]);
 
-    useEffect(() =>
-    {
-        if(trigger.intData.length >= 2)
-        {
+    useEffect(() => {
+        if (trigger.intData.length >= 2) {
             setMin(trigger.intData[0]);
             setMax(trigger.intData[1]);
-        }
-        else
-        {
+        } else {
             setMin(1);
-            setMax(1);
+            setMax(0);
         }
-    }, [ trigger ]);
-    
+        if (trigger.intData.length > 2) setUserSource(trigger.intData[2]);
+        else setUserSource(0);
+    }, [trigger]);
+
     return (
-        <WiredConditionBaseView requiresFurni={ WiredFurniType.STUFF_SELECTION_OPTION_NONE } hasSpecialInput={ true } save={ save }>
-            <Column gap={ 1 }>
-                <Text bold>{ LocalizeText('wiredfurni.params.usercountmin', [ 'value' ], [ min.toString() ]) }</Text>
-                <ReactSlider
-                    className={ 'nitro-slider' }
-                    min={ 1 }
-                    max={ 50 }
-                    value={ min }
-                    onChange={ event => setMin(event) } />
-            </Column>
-            <Column gap={ 1 }>
-                <Text bold>{ LocalizeText('wiredfurni.params.usercountmax', [ 'value' ], [ max.toString() ]) }</Text>
-                <ReactSlider
-                    className={ 'nitro-slider' }
-                    min={ 1 }
-                    max={ 50 }
-                    value={ max }
-                    onChange={ event => setMax(event) } />
-            </Column>
+        <WiredConditionBaseView
+            hasSpecialInput={true}
+            requiresFurni={WiredFurniType.STUFF_SELECTION_OPTION_NONE}
+            save={save}
+            footer={<WiredSourcesSelector showUsers={true} userSource={userSource} onChangeUsers={setUserSource} />}
+        >
+            <div className="flex flex-col gap-1">
+                <Text bold>{LocalizeText('wiredfurni.params.usercountmin', ['value'], [min.toString()])}</Text>
+                <Slider max={125} min={0} value={min} onChange={(event) => setMin(event)} />
+            </div>
+            <div className="flex flex-col gap-1">
+                <Text bold>{LocalizeText('wiredfurni.params.usercountmax', ['value'], [max.toString()])}</Text>
+                <Slider max={125} min={0} value={max} onChange={(event) => setMax(event)} />
+            </div>
         </WiredConditionBaseView>
     );
-}
+};

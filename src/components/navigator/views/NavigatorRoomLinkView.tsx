@@ -1,32 +1,61 @@
-import { FC } from 'react';
-import { GetConfiguration, LocalizeText } from '../../../api';
-import { Column, Flex, LayoutRoomThumbnailView, NitroCardContentView, NitroCardHeaderView, NitroCardView, Text } from '../../../common';
-import { useNavigator } from '../../../hooks';
+import { FC, useMemo, useState } from 'react';
+import { FaCheck, FaCopy } from 'react-icons/fa';
+import { CopyToClipboard, GetConfigurationValue, LocalizeText } from '../../../api';
+import { Button, LayoutRoomThumbnailView, NitroCardContentView, NitroCardHeaderView, NitroCardView, Text } from '../../../common';
+import { useNavigatorData } from '../../../hooks';
 
-export class NavigatorRoomLinkViewProps
-{
+export class NavigatorRoomLinkViewProps {
     onCloseClick: () => void;
 }
 
-export const NavigatorRoomLinkView: FC<NavigatorRoomLinkViewProps> = props =>
-{
+export const NavigatorRoomLinkView: FC<NavigatorRoomLinkViewProps> = (props) => {
     const { onCloseClick = null } = props;
-    const { navigatorData = null } = useNavigator();
+    const { navigatorData } = useNavigatorData();
+    const [copied, setCopied] = useState(false);
 
-    if(!navigatorData.enteredGuestRoom) return null;
-    
+    const roomLink = useMemo(() => {
+        if (!navigatorData.enteredGuestRoom) return '';
+
+        return LocalizeText('navigator.embed.src', ['roomId'], [navigatorData.enteredGuestRoom.roomId.toString()]).replace(
+            '${url.prefix}',
+            GetConfigurationValue<string>('url.prefix', '')
+        );
+    }, [navigatorData.enteredGuestRoom]);
+
+    if (!navigatorData.enteredGuestRoom) return null;
+
     return (
-        <NitroCardView className="nitro-room-link" theme="primary-slim">
-            <NitroCardHeaderView headerText={ LocalizeText('navigator.embed.title') } onCloseClick={ onCloseClick } />
-            <NitroCardContentView className="text-black d-flex align-items-center">
-                <Flex gap={ 2 }>
-                    <LayoutRoomThumbnailView roomId={ navigatorData.enteredGuestRoom.roomId } customUrl={ navigatorData.enteredGuestRoom.officialRoomPicRef } />
-                    <Column>
-                        <Text bold fontSize={ 5 }>{ LocalizeText('navigator.embed.headline') }</Text>
-                        <Text>{ LocalizeText('navigator.embed.info') }</Text>
-                        <input type="text" readOnly className="form-control form-control-sm" value={ LocalizeText('navigator.embed.src', [ 'roomId' ], [ navigatorData.enteredGuestRoom.roomId.toString() ]).replace('${url.prefix}', GetConfiguration<string>('url.prefix', '')) } />
-                    </Column>
-                </Flex>
+        <NitroCardView
+            className="nitro-room-link min-w-0 w-[min(430px,calc(100vw-16px))] max-w-[calc(100vw-16px)] max-h-[calc(100vh-16px)]"
+            theme="primary-slim"
+        >
+            <NitroCardHeaderView headerText={LocalizeText('navigator.embed.title')} onCloseClick={onCloseClick} />
+            <NitroCardContentView className="text-black flex items-center max-h-[calc(100vh-72px)]" overflow="auto">
+                <div className="flex flex-col sm:flex-row gap-2 min-w-0">
+                    <LayoutRoomThumbnailView customUrl={navigatorData.enteredGuestRoom.officialRoomPicRef} roomId={navigatorData.enteredGuestRoom.roomId} />
+                    <div className="flex flex-col min-w-0">
+                        <Text bold fontSize={5}>
+                            {LocalizeText('navigator.embed.headline')}
+                        </Text>
+                        <Text>{LocalizeText('navigator.embed.info')}</Text>
+                        <div className="nitro-navigator-air__link-field">
+                            <input
+                                readOnly
+                                className="form-control form-control-sm w-full min-w-0"
+                                type="text"
+                                value={roomLink}
+                                onFocus={(event) => event.target.select()}
+                            />
+                            <Button
+                                title={LocalizeText('generic.copy')}
+                                aria-label={LocalizeText('generic.copy')}
+                                onClick={() => void CopyToClipboard(roomLink).then(setCopied)}
+                            >
+                                {copied ? <FaCheck className="fa-icon" /> : <FaCopy className="fa-icon" />}
+                            </Button>
+                        </div>
+                    </div>
+                </div>
             </NitroCardContentView>
         </NitroCardView>
     );

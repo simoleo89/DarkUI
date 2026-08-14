@@ -1,19 +1,20 @@
 import { FC } from 'react';
 import { Offer } from '../../../../../api';
-import { Base, BaseProps, LayoutLimitedEditionCompletePlateView } from '../../../../../common';
-import { useCatalog } from '../../../../../hooks';
+import { LayoutLimitedEditionCompletePlateView } from '../../../../../common';
+import { useCatalogData } from '../../../../../hooks';
 
-export const CatalogLimitedItemWidgetView: FC<BaseProps<HTMLDivElement>> = props =>
-{
-    const { children = null, ...rest } = props;
-    const { currentOffer = null } = useCatalog();
+export const CatalogLimitedItemWidgetView: FC = (props) => {
+    const { currentOffer = null } = useCatalogData();
 
-    if(!currentOffer || (currentOffer.pricingModel !== Offer.PRICING_MODEL_SINGLE) || !currentOffer.product.isUniqueLimitedItem) return null;
-    
+    if (!currentOffer || currentOffer.pricingModel !== Offer.PRICING_MODEL_SINGLE || !currentOffer.product.isUniqueLimitedItem) return null;
+
     return (
-        <Base { ...rest }>
-            <LayoutLimitedEditionCompletePlateView className="mx-auto" uniqueLimitedItemsLeft={ currentOffer.product.uniqueLimitedItemsLeft } uniqueLimitedSeriesSize={ currentOffer.product.uniqueLimitedItemSeriesSize } />
-            { children }
-        </Base>
+        <div className="w-full">
+            <LayoutLimitedEditionCompletePlateView
+                className="mx-auto"
+                uniqueLimitedItemsLeft={currentOffer.product.uniqueLimitedItemsLeft}
+                uniqueLimitedSeriesSize={currentOffer.product.uniqueLimitedItemSeriesSize}
+            />
+        </div>
     );
-}
+};

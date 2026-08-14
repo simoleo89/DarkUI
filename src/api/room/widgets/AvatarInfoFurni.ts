@@ -1,15 +1,13 @@
 import { IObjectData } from '@nitrots/nitro-renderer';
 import { IAvatarInfo } from './IAvatarInfo';
 
-export class AvatarInfoFurni implements IAvatarInfo
-{
+export class AvatarInfoFurni implements IAvatarInfo {
     public static FURNI: string = 'IFI_FURNI';
 
     public id: number = 0;
     public category: number = 0;
     public name: string = '';
     public description: string = '';
-    public image: HTMLImageElement = null;
     public isWallItem: boolean = false;
     public isStickie: boolean = false;
     public isRoomOwner: boolean = false;
@@ -32,7 +30,13 @@ export class AvatarInfoFurni implements IAvatarInfo
     public availableForBuildersClub: boolean = false;
     public tileSizeX: number = 1;
     public tileSizeY: number = 1;
+    public allowStack: boolean = false;
+    public allowSit: boolean = false;
+    public allowLay: boolean = false;
+    public allowWalk: boolean = false;
+    public teleportTargetId: number = 0;
+    public spriteId: number = -1;
+    public productType: string = 's';
 
-    constructor(public readonly type: string)
-    {}
+    constructor(public readonly type: string) {}
 }

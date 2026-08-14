@@ -1,76 +1,134 @@
-import { RoomDataParser } from '@nitrots/nitro-renderer';
-import { FC, MouseEvent } from 'react';
-import { CreateRoomSession, DoorStateType, GetSessionDataManager, TryVisitRoom } from '../../../../api';
-import { Flex, LayoutGridItemProps, Text } from '../../../../common';
-import { LayoutRoomSmallThumbnailView } from '../../../../common/layout/LayoutRoomSmallThumbnailView';
-import { useNavigator } from '../../../../hooks';
-import { NavigatorSearchResultItemInfoSmallView } from './NavigatorSearchResultItemInfoSmallView';
+import { GetSessionDataManager, RoomDataParser } from '@nitrots/nitro-renderer';
+import React, { FC, KeyboardEvent, MouseEvent, useEffect, useRef } from 'react';
+import { FaUser } from 'react-icons/fa';
+import { CreateRoomSession, DoorStateType, TryVisitRoom } from '../../../../api';
+import { Column, Flex, LayoutBadgeImageView, LayoutGridItemProps, LayoutRoomThumbnailView, Text } from '../../../../common';
+import { useDoorState } from '../../../../hooks';
+import { NavigatorSearchResultItemInfoView } from './NavigatorSearchResultItemInfoView';
 
-export interface NavigatorSearchResultItemViewProps extends LayoutGridItemProps
-{
-    roomData: RoomDataParser
-    thumbnail?: boolean
+export interface NavigatorSearchResultItemViewProps extends LayoutGridItemProps {
+    roomData: RoomDataParser;
+    thumbnail?: boolean;
+    selectedRoomId?: number | null;
+    setSelectedRoomId?: React.Dispatch<React.SetStateAction<number | null>>;
+    isPopoverActive?: boolean;
+    setIsPopoverActive?: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
-export const NavigatorSearchResultItemView: FC<NavigatorSearchResultItemViewProps> = props =>
-{
-    const { roomData = null, children = null, thumbnail = false, ...rest } = props;
-    const { setDoorData = null } = useNavigator();
+export const NavigatorSearchResultItemView: FC<NavigatorSearchResultItemViewProps> = (props) => {
+    const { roomData = null, children = null, thumbnail = false, selectedRoomId, setSelectedRoomId, isPopoverActive, setIsPopoverActive, ...rest } = props;
+    const { setSnapshot: setDoorData } = useDoorState();
+    const closeTimeoutRef = useRef<ReturnType<typeof setTimeout>>(null);
+    const selectedRoomIdRef = useRef(selectedRoomId);
 
-    const getUserCounterColor = () =>
-    {
-        const num: number = (100 * (roomData.userCount / roomData.maxUserCount));
+    selectedRoomIdRef.current = selectedRoomId;
 
-        let bg = 'bg-primary';
+    const cancelPopoverClose = () => {
+        if (!closeTimeoutRef.current) return;
 
-        if (num >= 92)
-        {
-            bg = 'bg-danger';
+        clearTimeout(closeTimeoutRef.current);
+        closeTimeoutRef.current = null;
+    };
+
+    const schedulePopoverClose = () => {
+        if (!setSelectedRoomId || !setIsPopoverActive) return;
+
+        cancelPopoverClose();
+        closeTimeoutRef.current = setTimeout(() => {
+            closeTimeoutRef.current = null;
+            if (selectedRoomIdRef.current !== roomData.roomId) return;
+
+            setSelectedRoomId(null);
+            setIsPopoverActive(false);
+        }, 150);
+    };
+
+    const handleMouseEnter = () => {
+        if (!setSelectedRoomId || !setIsPopoverActive) return;
+
+        cancelPopoverClose();
+        setSelectedRoomId(roomData.roomId);
+        setIsPopoverActive(true);
+    };
+
+    const handleInfoClick = (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        cancelPopoverClose();
+
+        if (setIsPopoverActive && setSelectedRoomId) {
+            if (!isPopoverActive) {
+                setSelectedRoomId(roomData.roomId);
+                setIsPopoverActive(true);
+            } else if (selectedRoomId === roomData.roomId) {
+                setSelectedRoomId(null);
+                setIsPopoverActive(false);
+            } else {
+                setSelectedRoomId(roomData.roomId);
+            }
         }
-        else if (num >= 50)
-        {
-            bg = 'bg-warning';
-        }
-        else if (num > 0)
-        {
-            bg = 'bg-success';
-        }
+    };
 
-        return bg;
-    }
+    useEffect(() => {
+        const handleClickOutside = (event: Event) => {
+            const target = event.target as HTMLElement;
+            const navigatorItem = target.closest('.navigator-item');
 
-    const visitRoom = (event: MouseEvent) =>
-    {
-        if (roomData.ownerId !== GetSessionDataManager().userId)
-        {
-            if (roomData.habboGroupId !== 0)
-            {
+            if (!navigatorItem && setIsPopoverActive && setSelectedRoomId) {
+                setIsPopoverActive(false);
+                setSelectedRoomId(null);
+            }
+        };
+
+        document.addEventListener('click', handleClickOutside);
+        const handleEscape = (event: globalThis.KeyboardEvent) => {
+            if (event.key !== 'Escape' || !setIsPopoverActive || !setSelectedRoomId) return;
+
+            setIsPopoverActive(false);
+            setSelectedRoomId(null);
+        };
+
+        document.addEventListener('keydown', handleEscape);
+        return () => {
+            if (closeTimeoutRef.current) clearTimeout(closeTimeoutRef.current);
+            document.removeEventListener('click', handleClickOutside);
+            document.removeEventListener('keydown', handleEscape);
+        };
+    }, [setIsPopoverActive, setSelectedRoomId]);
+
+    const getUserCounterColor = () => {
+        if (roomData.maxUserCount <= 0) return roomData.userCount > 0 ? 'bg-success' : 'bg-primary';
+
+        const num: number = 100 * (roomData.userCount / roomData.maxUserCount);
+
+        if (num >= 92) return 'bg-danger';
+        if (num >= 50) return 'bg-warning';
+        if (num > 0) return 'bg-success';
+
+        return 'bg-primary';
+    };
+
+    const visitRoom = (event: MouseEvent) => {
+        if (roomData.ownerId !== GetSessionDataManager().userId) {
+            if (roomData.habboGroupId !== 0) {
                 TryVisitRoom(roomData.roomId);
-
                 return;
             }
 
-            switch (roomData.doorMode)
-            {
+            switch (roomData.doorMode) {
                 case RoomDataParser.DOORBELL_STATE:
-                    setDoorData(prevValue =>
-                    {
+                    setDoorData((prevValue) => {
                         const newValue = { ...prevValue };
-
                         newValue.roomInfo = roomData;
                         newValue.state = DoorStateType.START_DOORBELL;
-
                         return newValue;
                     });
                     return;
                 case RoomDataParser.PASSWORD_STATE:
-                    setDoorData(prevValue =>
-                    {
+                    setDoorData((prevValue) => {
                         const newValue = { ...prevValue };
-
                         newValue.roomInfo = roomData;
                         newValue.state = DoorStateType.START_PASSWORD;
-
                         return newValue;
                     });
                     return;
@@ -78,43 +136,145 @@ export const NavigatorSearchResultItemView: FC<NavigatorSearchResultItemViewProp
         }
 
         CreateRoomSession(roomData.roomId);
-    }
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+
+        event.preventDefault();
+        visitRoom(event as unknown as MouseEvent);
+    };
+
+    if (thumbnail)
+        return (
+            <Column
+                pointer
+                overflow="hidden"
+                alignItems="center"
+                className="navigator-item nitro-card-row p-1 small mb-1 flex-col"
+                role="button"
+                tabIndex={0}
+                aria-label={roomData.roomName}
+                gap={0}
+                onClick={visitRoom}
+                onKeyDown={handleKeyDown}
+                onMouseEnter={handleMouseEnter}
+                onMouseLeave={schedulePopoverClose}
+                {...rest}
+            >
+                <LayoutRoomThumbnailView
+                    className="flex flex-col items-center justify-end mb-1"
+                    customUrl={roomData.officialRoomPicRef}
+                    roomId={roomData.roomId}
+                >
+                    {roomData.habboGroupId > 0 && (
+                        <LayoutBadgeImageView
+                            badgeCode={roomData.groupBadgeCode}
+                            className="absolute! bottom-0 left-1/2 z-10 mb-1 -translate-x-1/2"
+                            isGroup={true}
+                        />
+                    )}
+                    <Flex
+                        center
+                        className={
+                            'inline-block px-[.65em] py-[.35em] text-[.75em] font-bold leading-none text-white text-center whitespace-nowrap align-baseline rounded-[.25rem] p-1 absolute m-1 ' +
+                            getUserCounterColor()
+                        }
+                        gap={1}
+                    >
+                        <FaUser className="fa-icon" />
+                        {roomData.userCount}
+                    </Flex>
+                    {roomData.doorMode !== RoomDataParser.OPEN_STATE && (
+                        <i
+                            className={
+                                'absolute inset-e-0 mb-1 me-1 icon icon-navigator-room-' +
+                                (roomData.doorMode === RoomDataParser.DOORBELL_STATE
+                                    ? 'locked'
+                                    : roomData.doorMode === RoomDataParser.PASSWORD_STATE
+                                      ? 'password'
+                                      : roomData.doorMode === RoomDataParser.INVISIBLE_STATE
+                                        ? 'invisible'
+                                        : '')
+                            }
+                        />
+                    )}
+                </LayoutRoomThumbnailView>
+                <Flex className="w-full">
+                    <Text truncate className="grow!">
+                        {roomData.roomName}
+                    </Text>
+                    <Flex reverse alignItems="center" gap={1}>
+                        <NavigatorSearchResultItemInfoView
+                            isVisible={selectedRoomId === roomData.roomId}
+                            onToggle={handleInfoClick}
+                            onHoverEnter={cancelPopoverClose}
+                            onHoverLeave={schedulePopoverClose}
+                            setIsPopoverActive={setIsPopoverActive}
+                            roomData={roomData}
+                        />
+                    </Flex>
+                    {children}
+                </Flex>
+            </Column>
+        );
 
     return (
-        <Flex pointer overflow="hidden" alignItems="center" onClick={visitRoom} gap={2} className="navigator-item py-1" {...rest}>
-            <Flex center gap={1}>
-                <LayoutRoomSmallThumbnailView roomId={roomData.roomId} customUrl={roomData.officialRoomPicRef} />
-                <div style={{ position: "relative" }}>
-                    <div style={{position: "absolute", width: "60px", top: "10px", left: "-64px"}} className={ 'badge p-1 ' + getUserCounterColor() }>
-                    <i className="fas fa-user" />
-                        { roomData.userCount }
-                    </div>
-                    { (roomData.doorMode !== RoomDataParser.OPEN_STATE) && 
-                        <i style={{position: "absolute", top: "-27px", left: "-19px"}} className={ ('icon icon-navigator-room-' + ((roomData.doorMode === RoomDataParser.DOORBELL_STATE) ? 'locked' : (roomData.doorMode === RoomDataParser.PASSWORD_STATE) ? 'password' : (roomData.doorMode === RoomDataParser.INVISIBLE_STATE) ? 'invisible' : '')) } /> }
-                    { roomData.habboGroupId > 0 && <i style={{position: "absolute", top: "-26px", right: "49px"}} className="icon icon-navigator-room-group" /> }
-                </div>
+        <Flex
+            pointer
+            alignItems="center"
+            className="navigator-item px-2 py-1 small"
+            role="button"
+            tabIndex={0}
+            aria-label={roomData.roomName}
+            gap={2}
+            overflow="hidden"
+            onClick={visitRoom}
+            onKeyDown={handleKeyDown}
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={schedulePopoverClose}
+            {...rest}
+        >
+            <Flex
+                center
+                className={
+                    'inline-block px-[.65em] py-[.35em] text-[.75em] font-bold leading-none text-white text-center whitespace-nowrap align-baseline rounded-[.25rem] p-1 ' +
+                    getUserCounterColor()
+                }
+                gap={1}
+            >
+                <FaUser className="fa-icon" />
+                {roomData.userCount}
             </Flex>
-            <Flex grow>
-                <div>
-                    <Text variant="white" bold fontSize={6} truncate>
-                        {roomData.roomName === null || roomData.roomName === "" ? <>Descripción</> : (
-                            <>{roomData.roomName.length < 38 ? <>{roomData.roomName}</> : <>{roomData.roomName.substring(0, 38)}...</>}</>
-                        )}
-                    </Text>
-                    <div style={{ marginTop: "0px", marginBottom: "1px" }} />
-                    <Text variant="white" truncate fontSize={6} small>{roomData.description === null || roomData.description === "" ? <>Descripción</> : (
-                        <>{roomData.description.length < 45 ? <>{roomData.description}</> : <>{roomData.description.substring(0, 45)}...</>}</>
-                    )}</Text>
-                    <div style={{ marginTop: "-4px", marginBottom: "1px" }} />
-                    <Text variant="muted" truncate style={{fontSize: "13px", textDecoration: "underline"}}>
-                        {roomData.ownerName}
-                    </Text>
-                </div>
-            </Flex>
-            <Flex reverse alignItems="center" gap={1} className="px-2">
-                <NavigatorSearchResultItemInfoSmallView roomData={roomData} />
+            <Text grow truncate className="min-w-0">
+                {roomData.roomName}
+            </Text>
+            <Flex reverse alignItems="center" gap={1} className="shrink-0">
+                <NavigatorSearchResultItemInfoView
+                    isVisible={selectedRoomId === roomData.roomId && isPopoverActive}
+                    onToggle={handleInfoClick}
+                    onHoverEnter={cancelPopoverClose}
+                    onHoverLeave={schedulePopoverClose}
+                    setIsPopoverActive={setIsPopoverActive}
+                    roomData={roomData}
+                />
+                {roomData.habboGroupId > 0 && <i className="nitro-icon icon-navigator-room-group" />}
+                {roomData.doorMode !== RoomDataParser.OPEN_STATE && (
+                    <i
+                        className={
+                            'nitro-icon icon-navigator-room-' +
+                            (roomData.doorMode === RoomDataParser.DOORBELL_STATE
+                                ? 'locked'
+                                : roomData.doorMode === RoomDataParser.PASSWORD_STATE
+                                  ? 'password'
+                                  : roomData.doorMode === RoomDataParser.INVISIBLE_STATE
+                                    ? 'invisible'
+                                    : '')
+                        }
+                    />
+                )}
             </Flex>
             {children}
         </Flex>
     );
-}
+};

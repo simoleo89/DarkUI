@@ -1,22 +1,50 @@
 {
     "compilerOptions": {
-        "baseUrl": "./src",
-        "target": "es6",
-        "lib": ["dom", "dom.iterable", "esnext"],
+        "target": "es2022",
+        "lib": [
+            "dom",
+            "dom.iterable",
+            "esnext"
+        ],
         "allowJs": true,
         "skipLibCheck": true,
         "esModuleInterop": true,
         "allowSyntheticDefaultImports": true,
         "strict": false,
-        "downlevelIteration": true,
         "forceConsistentCasingInFileNames": true,
         "noFallthroughCasesInSwitch": false,
-        "module": "esnext",
-        "moduleResolution": "node",
+        "module": "ES2022",
+        "moduleResolution": "bundler",
         "resolveJsonModule": true,
         "isolatedModules": true,
         "noEmit": true,
-        "jsx": "react-jsx"
+        "jsx": "react-jsx",
+        "paths": {
+            "@layout/*": [
+                "./src/layout/*"
+            ],
+            "@/*": [
+                "./src/*"
+            ],
+            "pixi.js": [
+                "../renderer/node_modules/pixi.js",
+                "../Nitro_Render_V3/node_modules/pixi.js",
+                "../../DEV/renderer/node_modules/pixi.js"
+            ],
+            "@nitrots/nitro-renderer": [
+                "../renderer/index.ts",
+                "../Nitro_Render_V3/index.ts",
+                "../../DEV/renderer/index.ts"
+            ],
+            "@nitrots/*": [
+                "../renderer/packages/*/src/index.ts",
+                "../Nitro_Render_V3/packages/*/src/index.ts",
+                "../../DEV/renderer/packages/*/src/index.ts"
+            ]
+        }
     },
-    "include": ["src", "submodules/renderer/src/**/*.ts"]
+    "include": [
+        "src",
+        "node_modules/@nitrots/nitro-renderer/src/**/*.ts"
+    ]
 }

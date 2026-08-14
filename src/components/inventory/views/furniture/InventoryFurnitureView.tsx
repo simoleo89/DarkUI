@@ -1,146 +1,176 @@
-import { IRoomSession, RoomObjectVariable, RoomPreviewer, Vector3d } from '@nitrots/nitro-renderer';
+import { InfiniteGrid } from '@layout/InfiniteGrid';
+import { GetSessionDataManager, IRoomSession, RoomPreviewer, Vector3d } from '@nitrots/nitro-renderer';
 import { FC, useEffect, useState } from 'react';
-import { attemptItemPlacement, DispatchUiEvent, FurniCategory, GetRoomEngine, GetSessionDataManager, GroupItem, LocalizeText, UnseenItemCategory } from '../../../../api';
-import { AutoGrid, Button, Column, Grid, LayoutLimitedEditionCompactPlateView, LayoutRarityLevelView, LayoutRoomPreviewerView, Text } from '../../../../common';
-import { CatalogPostMarketplaceOfferEvent } from '../../../../events';
+import { FaPowerOff, FaSyncAlt, FaTrashAlt } from 'react-icons/fa';
+import { attemptItemPlacement, DispatchUiEvent, FurniCategory, GroupItem, LocalizeText, UnseenItemCategory } from '../../../../api';
+import { LayoutLimitedEditionCompactPlateView, LayoutRarityLevelView, LayoutRoomPreviewerView } from '../../../../common';
+import { CatalogPostMarketplaceOfferEvent, DeleteItemConfirmEvent } from '../../../../events';
 import { useInventoryFurni, useInventoryUnseenTracker } from '../../../../hooks';
+import { NitroButton } from '../../../../layout';
 import { InventoryCategoryEmptyView } from '../InventoryCategoryEmptyView';
 import { InventoryFurnitureItemView } from './InventoryFurnitureItemView';
-import { InventoryFurnitureSearchView } from './InventoryFurnitureSearchView';
 
-interface InventoryFurnitureViewProps
-{
-    roomSession: IRoomSession;
-    roomPreviewer: RoomPreviewer;
-}
-
-const attemptPlaceMarketplaceOffer = (groupItem: GroupItem) =>
-{
+const attemptPlaceMarketplaceOffer = (groupItem: GroupItem) => {
     const item = groupItem.getLastItem();
 
-    if(!item) return false;
+    if (!item) return false;
 
-    if(!item.sellable) return false;
+    if (!item.sellable) return false;
 
     DispatchUiEvent(new CatalogPostMarketplaceOfferEvent(item));
-}
+};
 
-export const InventoryFurnitureView: FC<InventoryFurnitureViewProps> = props =>
-{
-    const { roomSession = null, roomPreviewer = null } = props;
-    const [ isVisible, setIsVisible ] = useState(false);
-    const [ filteredGroupItems, setFilteredGroupItems ] = useState<GroupItem[]>([]);
+const attemptDeleteItem = (groupItem: GroupItem) => {
+    const item = groupItem.getLastItem();
+
+    if (!item) return;
+
+    DispatchUiEvent(new DeleteItemConfirmEvent(item, groupItem.getTotalCount()));
+};
+
+export const InventoryFurnitureView: FC<{
+    roomSession: IRoomSession;
+    roomPreviewer: RoomPreviewer;
+    filteredGroupItems: GroupItem[];
+}> = (props) => {
+    const { roomSession = null, roomPreviewer = null, filteredGroupItems = [] } = props;
+    const [isVisible, setIsVisible] = useState(false);
     const { groupItems = [], selectedItem = null, activate = null, deactivate = null } = useInventoryFurni();
     const { resetItems = null } = useInventoryUnseenTracker();
 
-    useEffect(() =>
-    {
-        if(!selectedItem || !roomPreviewer) return;
+    useEffect(() => {
+        if (!selectedItem || !roomPreviewer) return;
 
         const furnitureItem = selectedItem.getLastItem();
 
-        if(!furnitureItem) return;
-
-        const roomEngine = GetRoomEngine();
-
-        let wallType = roomEngine.getRoomInstanceVariable<string>(roomEngine.activeRoomId, RoomObjectVariable.ROOM_WALL_TYPE);
-        let floorType = roomEngine.getRoomInstanceVariable<string>(roomEngine.activeRoomId, RoomObjectVariable.ROOM_FLOOR_TYPE);
-        let landscapeType = roomEngine.getRoomInstanceVariable<string>(roomEngine.activeRoomId, RoomObjectVariable.ROOM_LANDSCAPE_TYPE);
-
-        wallType = (wallType && wallType.length) ? wallType : '101';
-        floorType = (floorType && floorType.length) ? floorType : '101';
-        landscapeType = (landscapeType && landscapeType.length) ? landscapeType : '1.1';
+        if (!furnitureItem) return;
 
         roomPreviewer.reset(false);
+
+        const isRoomDecoration =
+            furnitureItem.category === FurniCategory.WALL_PAPER ||
+            furnitureItem.category === FurniCategory.FLOOR ||
+            furnitureItem.category === FurniCategory.LANDSCAPE;
+
+        let floorType = '111';
+        let wallType = '217';
+        let landscapeType = '1.1';
+
+        if (isRoomDecoration) {
+            floorType = furnitureItem.category === FurniCategory.FLOOR ? selectedItem.stuffData.getLegacyString() : floorType;
+            wallType = furnitureItem.category === FurniCategory.WALL_PAPER ? selectedItem.stuffData.getLegacyString() : wallType;
+            landscapeType = furnitureItem.category === FurniCategory.LANDSCAPE ? selectedItem.stuffData.getLegacyString() : landscapeType;
+
+            roomPreviewer.updateRoomWallsAndFloorVisibility(true, true);
+            roomPreviewer.updateObjectRoom(floorType, wallType, landscapeType);
+
+            if (furnitureItem.category === FurniCategory.LANDSCAPE) {
+                const data = GetSessionDataManager().getWallItemDataByName('window_double_default');
+
+                if (data) roomPreviewer.addWallItemIntoRoom(data.id, new Vector3d(90, 0, 0), data.customParams);
+            }
+
+            return;
+        }
+
         roomPreviewer.updateObjectRoom(floorType, wallType, landscapeType);
         roomPreviewer.updateRoomWallsAndFloorVisibility(true, true);
 
-        if((furnitureItem.category === FurniCategory.WALL_PAPER) || (furnitureItem.category === FurniCategory.FLOOR) || (furnitureItem.category === FurniCategory.LANDSCAPE))
-        {
-            floorType = ((furnitureItem.category === FurniCategory.FLOOR) ? selectedItem.stuffData.getLegacyString() : floorType);
-            wallType = ((furnitureItem.category === FurniCategory.WALL_PAPER) ? selectedItem.stuffData.getLegacyString() : wallType);
-            landscapeType = ((furnitureItem.category === FurniCategory.LANDSCAPE) ? selectedItem.stuffData.getLegacyString() : landscapeType);
-
-            roomPreviewer.updateObjectRoom(floorType, wallType, landscapeType);
-
-            if(furnitureItem.category === FurniCategory.LANDSCAPE)
-            {
-                const data = GetSessionDataManager().getWallItemDataByName('window_double_default');
-
-                if(data) roomPreviewer.addWallItemIntoRoom(data.id, new Vector3d(90, 0, 0), data.customParams);
-            }
+        if (selectedItem.isWallItem) {
+            roomPreviewer.addWallItemIntoRoom(selectedItem.type, new Vector3d(90), furnitureItem.stuffData.getLegacyString());
+        } else {
+            roomPreviewer.addFurnitureIntoRoom(selectedItem.type, new Vector3d(90), selectedItem.stuffData, furnitureItem.extra.toString());
         }
-        else
-        {
-            if(selectedItem.isWallItem)
-            {
-                roomPreviewer.addWallItemIntoRoom(selectedItem.type, new Vector3d(90), furnitureItem.stuffData.getLegacyString());
-            }
-            else
-            {
-                roomPreviewer.addFurnitureIntoRoom(selectedItem.type, new Vector3d(90), selectedItem.stuffData, (furnitureItem.extra.toString()));
-            }
-        }
-    }, [ roomPreviewer, selectedItem ]);
+    }, [roomPreviewer, selectedItem]);
 
-    useEffect(() =>
-    {
-        if(!selectedItem || !selectedItem.hasUnseenItems) return;
+    useEffect(() => {
+        if (!selectedItem || !selectedItem.hasUnseenItems) return;
 
-        resetItems(UnseenItemCategory.FURNI, selectedItem.items.map(item => item.id));
+        resetItems(
+            UnseenItemCategory.FURNI,
+            selectedItem.items.map((item) => item.id)
+        );
 
         selectedItem.hasUnseenItems = false;
-    }, [ selectedItem, resetItems ]);
+    }, [selectedItem, resetItems]);
 
-    useEffect(() =>
-    {
-        if(!isVisible) return;
+    useEffect(() => {
+        if (!isVisible) return;
 
         const id = activate();
 
         return () => deactivate(id);
-    }, [ isVisible, activate, deactivate ]);
+    }, [isVisible, activate, deactivate]);
 
-    useEffect(() =>
-    {
+    useEffect(() => {
         setIsVisible(true);
 
         return () => setIsVisible(false);
     }, []);
 
-    if(!groupItems || !groupItems.length) return <InventoryCategoryEmptyView title={ LocalizeText('inventory.empty.title') } desc={ LocalizeText('inventory.empty.desc') } />;
+    if (!groupItems || !groupItems.length)
+        return <InventoryCategoryEmptyView desc={LocalizeText('inventory.empty.desc')} title={LocalizeText('inventory.empty.title')} />;
 
     return (
-        <Grid>
-            <Column size={ 7 } overflow="hidden">
-                <InventoryFurnitureSearchView groupItems={ groupItems } setGroupItems={ setFilteredGroupItems } />
-                <AutoGrid columnCount={ 5 }>
-                    { filteredGroupItems && (filteredGroupItems.length > 0) && filteredGroupItems.map((item, index) => <InventoryFurnitureItemView key={ index } groupItem={ item } />) }
-                </AutoGrid>
-            </Column>
-            <Column size={ 5 } overflow="auto">
-                <Column overflow="hidden" position="relative">
-                    <LayoutRoomPreviewerView roomPreviewer={ roomPreviewer } height={ 140 } />
-                    { selectedItem && selectedItem.stuffData.isUnique &&
-                        <LayoutLimitedEditionCompactPlateView className="top-2 end-2" position="absolute" uniqueNumber={ selectedItem.stuffData.uniqueNumber } uniqueSeries={ selectedItem.stuffData.uniqueSeries } /> }
-                    { (selectedItem && selectedItem.stuffData.rarityLevel > -1) &&
-                        <LayoutRarityLevelView className="top-2 end-2" position="absolute" level={ selectedItem.stuffData.rarityLevel } /> }
-                </Column>
-                { selectedItem &&
-                    <Column grow justifyContent="between" gap={ 2 }>
-                        <Text variant='white' small grow truncate>{ selectedItem.name }</Text>
-                        <Column gap={ 1 }>
-                            { !!roomSession &&
-                                <Button variant="success" onClick={ event => attemptItemPlacement(selectedItem) }>
-                                    { LocalizeText('inventory.furni.placetoroom') }
-                                </Button> }
-                            { (selectedItem && selectedItem.isSellable) &&
-                                <Button onClick={ event => attemptPlaceMarketplaceOffer(selectedItem) }>
-                                    { LocalizeText('inventory.marketplace.sell') }
-                                </Button> }
-                        </Column>
-                    </Column> }
-            </Column>
-        </Grid>
+        <div className="grid h-full grid-cols-12 gap-2">
+            <div className="flex flex-col col-span-7 gap-1 overflow-hidden">
+                <InfiniteGrid<GroupItem> columnCount={6} itemRender={(item) => <InventoryFurnitureItemView groupItem={item} />} items={filteredGroupItems} />
+            </div>
+            <div className="flex flex-col col-span-5">
+                <div className="relative flex flex-col">
+                    <LayoutRoomPreviewerView height={140} roomPreviewer={roomPreviewer} />
+                    {selectedItem && (
+                        <>
+                            <button
+                                className="nitro-inventory-preview-btn nitro-inventory-preview-rotate"
+                                onClick={() => roomPreviewer?.changeRoomObjectDirection()}
+                            >
+                                <FaSyncAlt /> Rotate
+                            </button>
+                            <button
+                                className="nitro-inventory-preview-btn nitro-inventory-preview-state"
+                                onClick={() => roomPreviewer?.changeRoomObjectState()}
+                            >
+                                <FaPowerOff /> Toggle State
+                            </button>
+                        </>
+                    )}
+                    {selectedItem && (
+                        <NitroButton className="bg-danger! hover:bg-danger/80! absolute bottom-2 inset-e-2 p-1" onClick={() => attemptDeleteItem(selectedItem)}>
+                            <FaTrashAlt className="fa-icon" />
+                        </NitroButton>
+                    )}
+                    {selectedItem && selectedItem.stuffData.isUnique && (
+                        <LayoutLimitedEditionCompactPlateView
+                            className="top-2 inset-e-2"
+                            position="absolute"
+                            uniqueNumber={selectedItem.stuffData.uniqueNumber}
+                            uniqueSeries={selectedItem.stuffData.uniqueSeries}
+                        />
+                    )}
+                    {selectedItem && selectedItem.stuffData.rarityLevel > -1 && (
+                        <LayoutRarityLevelView className="top-2 inset-e-2" level={selectedItem.stuffData.rarityLevel} position="absolute" />
+                    )}
+                </div>
+                {selectedItem && (
+                    <div className="flex flex-col justify-between gap-2 grow">
+                        <span className="text-sm truncate grow">{selectedItem.name}</span>
+                        {selectedItem.description && <span className="text-xs truncate">{selectedItem.description}</span>}
+                        <div className="flex flex-col gap-1">
+                            {!!roomSession && (
+                                <NitroButton className="nitro-inventory-btn-place" onClick={(event) => attemptItemPlacement(selectedItem)}>
+                                    {LocalizeText('inventory.furni.placetoroom')}
+                                </NitroButton>
+                            )}
+                            {selectedItem.isSellable && (
+                                <NitroButton className="nitro-inventory-btn-sell" onClick={(event) => attemptPlaceMarketplaceOffer(selectedItem)}>
+                                    {LocalizeText('inventory.marketplace.sell')}
+                                </NitroButton>
+                            )}
+                        </div>
+                    </div>
+                )}
+            </div>
+        </div>
     );
-}
+};

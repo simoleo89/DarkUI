@@ -1,7 +1,5 @@
-export const GetIssueCategoryName = (categoryId: number) =>
-{
-    switch(categoryId)
-    {
+export const GetIssueCategoryName = (categoryId: number) => {
+    switch (categoryId) {
         case 1:
         case 2:
             return 'Normal';
@@ -32,4 +30,4 @@ export const GetIssueCategoryName = (categoryId: number) =>
     }
 
     return 'Unknown';
-}
+};

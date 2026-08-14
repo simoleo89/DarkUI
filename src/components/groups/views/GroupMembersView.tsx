@@ -1,80 +1,116 @@
-import { GroupAdminGiveComposer, GroupAdminTakeComposer, GroupConfirmMemberRemoveEvent, GroupConfirmRemoveMemberComposer, GroupMemberParser, GroupMembersComposer, GroupMembersEvent, GroupMembershipAcceptComposer, GroupMembershipDeclineComposer, GroupMembersParser, GroupRank, GroupRemoveMemberComposer, ILinkEventTracker } from '@nitrots/nitro-renderer';
-import { FC, useCallback, useEffect, useState } from 'react';
+import {
+    AddLinkEventTracker,
+    GetSessionDataManager,
+    GroupAdminGiveComposer,
+    GroupAdminTakeComposer,
+    GroupConfirmMemberRemoveEvent,
+    GroupConfirmRemoveMemberComposer,
+    GroupMemberParser,
+    GroupMembersComposer,
+    GroupMembersEvent,
+    GroupMembershipAcceptComposer,
+    GroupMembershipDeclineComposer,
+    GroupMembersParser,
+    GroupRank,
+    GroupRemoveMemberComposer,
+    ILinkEventTracker,
+    RemoveLinkEventTracker
+} from '@nitrots/nitro-renderer';
+import { FC, useCallback, useEffect, useRef, useState } from 'react';
 import { FaChevronLeft, FaChevronRight } from 'react-icons/fa';
-import { AddEventLinkTracker, GetSessionDataManager, GetUserProfile, LocalizeText, RemoveLinkEventTracker, SendMessageComposer } from '../../../api';
-import { Base, Button, Column, Flex, Grid, LayoutAvatarImageView, LayoutBadgeImageView, NitroCardContentView, NitroCardHeaderView, NitroCardView, Text } from '../../../common';
+import { GetUserProfile, LocalizeText, SendMessageComposer } from '../../../api';
+import {
+    Button,
+    Column,
+    Flex,
+    Grid,
+    LayoutAvatarImageView,
+    LayoutBadgeImageView,
+    NitroCardContentView,
+    NitroCardHeaderView,
+    NitroCardView,
+    Text
+} from '../../../common';
 import { useMessageEvent, useNotification } from '../../../hooks';
+import { classNames } from '../../../layout';
 
-export const GroupMembersView: FC<{}> = props =>
-{
-    const [ groupId, setGroupId ] = useState<number>(-1);
-    const [ levelId, setLevelId ] = useState<number>(-1);
-    const [ membersData, setMembersData ] = useState<GroupMembersParser>(null);
-    const [ pageId, setPageId ] = useState<number>(-1);
-    const [ totalPages, setTotalPages ] = useState<number>(0);
-    const [ searchQuery, setSearchQuery ] = useState<string>('');
-    const [ removingMemberName, setRemovingMemberName ] = useState<string>(null);
+export const GroupMembersView: FC<{}> = (props) => {
+    const [groupId, setGroupId] = useState<number>(-1);
+    const [levelId, setLevelId] = useState<number>(-1);
+    const [membersData, setMembersData] = useState<GroupMembersParser>(null);
+    const [pageId, setPageId] = useState<number>(-1);
+    const [totalPages, setTotalPages] = useState<number>(0);
+    const [searchQuery, setSearchQuery] = useState<string>('');
+    const [removingMemberName, setRemovingMemberName] = useState<string>(null);
     const { showConfirm = null } = useNotification();
+    const pendingActionsRef = useRef<Set<string>>(new Set());
 
-    const getRankDescription = (member: GroupMemberParser) =>
-    {
-        if(member.rank === GroupRank.OWNER) return 'group.members.owner';
-        
-        if(membersData.admin)
-        {
-            if(member.rank === GroupRank.ADMIN) return 'group.members.removerights';
+    const getRankDescription = (member: GroupMemberParser) => {
+        if (member.rank === GroupRank.OWNER) return 'group.members.owner';
 
-            if(member.rank === GroupRank.MEMBER) return 'group.members.giverights';
+        if (membersData.admin) {
+            if (member.rank === GroupRank.ADMIN) return 'group.members.removerights';
+
+            if (member.rank === GroupRank.MEMBER) return 'group.members.giverights';
         }
 
         return '';
-    }
+    };
 
-    const refreshMembers = useCallback(() =>
-    {
-        if((groupId === -1) || (levelId === -1) || (pageId === -1)) return;
+    const refreshMembers = useCallback(() => {
+        if (groupId === -1 || levelId === -1 || pageId === -1) return;
 
         SendMessageComposer(new GroupMembersComposer(groupId, pageId, searchQuery, levelId));
-    }, [ groupId, levelId, pageId, searchQuery ]);
+    }, [groupId, levelId, pageId, searchQuery]);
 
-    const toggleAdmin = (member: GroupMemberParser) =>
-    {
-        if(!membersData.admin || (member.rank === GroupRank.OWNER)) return;
-        
-        if(member.rank !== GroupRank.ADMIN) SendMessageComposer(new GroupAdminGiveComposer(membersData.groupId, member.id));
+    const toggleAdmin = (member: GroupMemberParser) => {
+        if (!membersData.admin || member.rank === GroupRank.OWNER) return;
+
+        const key = `admin_${member.id}`;
+        if (pendingActionsRef.current.has(key)) return;
+        pendingActionsRef.current.add(key);
+        setTimeout(() => pendingActionsRef.current.delete(key), 2000);
+
+        if (member.rank !== GroupRank.ADMIN) SendMessageComposer(new GroupAdminGiveComposer(membersData.groupId, member.id));
         else SendMessageComposer(new GroupAdminTakeComposer(membersData.groupId, member.id));
 
         refreshMembers();
-    }
+    };
 
-    const acceptMembership = (member: GroupMemberParser) =>
-    {
-        if(!membersData.admin || (member.rank !== GroupRank.REQUESTED)) return;
-        
+    const acceptMembership = (member: GroupMemberParser) => {
+        if (!membersData.admin || member.rank !== GroupRank.REQUESTED) return;
+
+        const key = `accept_${member.id}`;
+        if (pendingActionsRef.current.has(key)) return;
+        pendingActionsRef.current.add(key);
+        setTimeout(() => pendingActionsRef.current.delete(key), 2000);
+
         SendMessageComposer(new GroupMembershipAcceptComposer(membersData.groupId, member.id));
 
         refreshMembers();
-    }
+    };
 
-    const removeMemberOrDeclineMembership = (member: GroupMemberParser) =>
-    {
-        if(!membersData.admin) return;
+    const removeMemberOrDeclineMembership = (member: GroupMemberParser) => {
+        if (!membersData.admin) return;
 
-        if(member.rank === GroupRank.REQUESTED)
-        {
+        const key = `remove_${member.id}`;
+        if (pendingActionsRef.current.has(key)) return;
+        pendingActionsRef.current.add(key);
+        setTimeout(() => pendingActionsRef.current.delete(key), 2000);
+
+        if (member.rank === GroupRank.REQUESTED) {
             SendMessageComposer(new GroupMembershipDeclineComposer(membersData.groupId, member.id));
 
             refreshMembers();
 
             return;
         }
-        
+
         setRemovingMemberName(member.name);
         SendMessageComposer(new GroupConfirmRemoveMemberComposer(membersData.groupId, member.id));
-    }
+    };
 
-    useMessageEvent<GroupMembersEvent>(GroupMembersEvent, event =>
-    {
+    useMessageEvent<GroupMembersEvent>(GroupMembersEvent, (event) => {
         const parser = event.getParser();
 
         setMembersData(parser);
@@ -82,32 +118,36 @@ export const GroupMembersView: FC<{}> = props =>
         setTotalPages(Math.ceil(parser.totalMembersCount / parser.pageSize));
     });
 
-    useMessageEvent<GroupConfirmMemberRemoveEvent>(GroupConfirmMemberRemoveEvent, event =>
-    {
+    useMessageEvent<GroupConfirmMemberRemoveEvent>(GroupConfirmMemberRemoveEvent, (event) => {
         const parser = event.getParser();
 
-        showConfirm(LocalizeText(((parser.furnitureCount > 0) ? 'group.kickconfirm.desc' : 'group.kickconfirm_nofurni.desc'), [ 'user', 'amount' ], [ removingMemberName, parser.furnitureCount.toString() ]), () =>
-        {
-            SendMessageComposer(new GroupRemoveMemberComposer(membersData.groupId, parser.userId));
+        showConfirm(
+            LocalizeText(
+                parser.furnitureCount > 0 ? 'group.kickconfirm.desc' : 'group.kickconfirm_nofurni.desc',
+                ['user', 'amount'],
+                [removingMemberName, parser.furnitureCount.toString()]
+            ),
+            () => {
+                SendMessageComposer(new GroupRemoveMemberComposer(membersData.groupId, parser.userId));
 
-            refreshMembers();
-        }, null);
-            
+                refreshMembers();
+            },
+            null
+        );
+
         setRemovingMemberName(null);
     });
 
-    useEffect(() =>
-    {
+    useEffect(() => {
         const linkTracker: ILinkEventTracker = {
-            linkReceived: (url: string) =>
-            {
+            linkReceived: (url: string) => {
                 const parts = url.split('/');
-        
-                if(parts.length < 2) return;
-        
-                const groupId = (parseInt(parts[1]) || -1);
-                const levelId = (parseInt(parts[2]) || 3);
-                
+
+                if (parts.length < 2) return;
+
+                const groupId = parseInt(parts[1]) || -1;
+                const levelId = Number.isInteger(parseInt(parts[2])) ? parseInt(parts[2]) : 0;
+
                 setGroupId(groupId);
                 setLevelId(levelId);
                 setPageId(0);
@@ -115,92 +155,147 @@ export const GroupMembersView: FC<{}> = props =>
             eventUrlPrefix: 'group-members/'
         };
 
-        AddEventLinkTracker(linkTracker);
+        AddLinkEventTracker(linkTracker);
 
         return () => RemoveLinkEventTracker(linkTracker);
     }, []);
 
-    useEffect(() =>
-    {
+    useEffect(() => {
         setPageId(0);
-    }, [ groupId, levelId, searchQuery ]);
+    }, [groupId, levelId, searchQuery]);
 
-    useEffect(() =>
-    {
-        if((groupId === -1) || (levelId === -1) || (pageId === -1)) return;
+    useEffect(() => {
+        if (groupId === -1 || levelId === -1 || pageId === -1) return;
 
         SendMessageComposer(new GroupMembersComposer(groupId, pageId, searchQuery, levelId));
-    }, [ groupId, levelId, pageId, searchQuery ]);
+    }, [groupId, levelId, pageId, searchQuery]);
 
-    useEffect(() =>
-    {
-        if(groupId === -1) return;
+    useEffect(() => {
+        if (groupId === -1) return;
 
-        setLevelId(-1);
         setMembersData(null);
         setTotalPages(0);
         setSearchQuery('');
-        setRemovingMemberName(null); 
-    }, [ groupId ]);
+        setRemovingMemberName(null);
+    }, [groupId]);
 
-    if((groupId === -1) || !membersData) return null;
+    if (groupId === -1 || !membersData) return null;
 
     return (
-        <NitroCardView className="nitro-group-members" theme="primary-slim">
-            <NitroCardHeaderView headerText={ LocalizeText('group.members.title', [ 'groupName' ], [ membersData ? membersData.groupTitle : '' ]) } onCloseClick={ event => setGroupId(-1) } />
-            <NitroCardContentView overflow="hidden">
-                <Flex gap={ 2 }>
-                    <Flex center className="group-badge">
-                        <LayoutBadgeImageView badgeCode={ membersData.badge } isGroup={ true } className="mx-auto d-block"/>
+        <NitroCardView className="nitro-groups-window nitro-group-members" theme="primary-slim" isResizable={false}>
+            <NitroCardHeaderView
+                headerText={LocalizeText('group.members.title', ['groupName'], [membersData ? membersData.groupTitle : ''])}
+                onCloseClick={(event) => setGroupId(-1)}
+            />
+            <NitroCardContentView className="nitro-groups-content" overflow="hidden">
+                <div className="nitro-group-members-search flex gap-2">
+                    <Flex center className="group-badge nitro-group-members-search__badge">
+                        <LayoutBadgeImageView badgeCode={membersData.badge} className="mx-auto block" isGroup={true} />
                     </Flex>
-                    <Column fullWidth gap={ 1 }>
-                        <input type="text" className="form-control form-control-sm w-100" placeholder={ LocalizeText('group.members.searchinfo') } value={ searchQuery } onChange={ event => setSearchQuery(event.target.value) } />
-                        <select className="form-select form-select-sm w-100" value={ levelId } onChange={ event => setLevelId(parseInt(event.target.value)) }>
-                            <option value="0">{ LocalizeText('group.members.search.all') }</option>
-                            <option value="1">{ LocalizeText('group.members.search.admins') }</option>
-                            <option value="2">{ LocalizeText('group.members.search.pending') }</option>
+                    <Column fullWidth gap={1} className="nitro-group-members-search__controls">
+                        <input
+                            className="nitro-groups-input min-h-[calc(1.5em+.5rem+2px)] px-[.5rem] py-[.25rem] text-[.7875rem] rounded-[.2rem] w-full"
+                            placeholder={LocalizeText('group.members.searchinfo')}
+                            type="text"
+                            value={searchQuery}
+                            onChange={(event) => setSearchQuery(event.target.value)}
+                        />
+                        <select className="nitro-groups-select form-select form-select-sm w-full" value={levelId} onChange={(event) => setLevelId(parseInt(event.target.value))}>
+                            <option value="0">{LocalizeText('group.members.search.all')}</option>
+                            <option value="1">{LocalizeText('group.members.search.admins')}</option>
+                            <option value="2">{LocalizeText('group.members.search.pending')}</option>
                         </select>
                     </Column>
-                </Flex>
-                <Grid columnCount={ 2 } overflow="auto" className="nitro-group-members-list-grid">
-                    { membersData.result.map((member, index) =>
-                    {
+                </div>
+                <Grid className="nitro-group-members-list-grid" columnCount={2} overflow="auto">
+                    {membersData.result.map((member, index) => {
                         return (
-                            <Flex key={ index } gap={ 2 } alignItems="center" overflow="hidden" className="member-list-item bg-white rounded p-2">
-                                <div className="avatar-head cursor-pointer" onClick={ () => GetUserProfile(member.id) }>
-                                    <LayoutAvatarImageView figure={ member.figure } headOnly={ true } direction={ 2 } />
+                            <Flex key={index} alignItems="center" className="nitro-group-member-row" gap={0} overflow="hidden">
+                                <div className="nitro-group-member-row__avatar cursor-pointer" onClick={() => GetUserProfile(member.id)}>
+                                    <LayoutAvatarImageView
+                                        className="nitro-group-member-row__head"
+                                        direction={2}
+                                        figure={member.figure}
+                                        headOnly={true}
+                                        compactHead
+                                        compactHeadSize={40}
+                                        compactHeadPadding={0}
+                                    />
                                 </div>
-                                <Column grow gap={ 1 }>
-                                    <Text bold small pointer onClick={ event => GetUserProfile(member.id) }>{ member.name }</Text>
-                                    { (member.rank !== GroupRank.REQUESTED) &&
-                                    <Text small italics variant="muted">{ LocalizeText('group.members.since', [ 'date' ], [ member.joinedAt ]) }</Text> }
+                                <Column className="nitro-group-member-row__copy" grow gap={0}>
+                                    <Text bold pointer small className="nitro-group-member-row__name" onClick={(event) => GetUserProfile(member.id)}>
+                                        {member.name}
+                                    </Text>
+                                    {member.rank !== GroupRank.REQUESTED && (
+                                        <Text italics small variant="muted" className="nitro-group-member-row__since">
+                                            {LocalizeText('group.members.since', ['date'], [member.joinedAt])}
+                                        </Text>
+                                    )}
                                 </Column>
-                                <Column gap={ 1 }>
-                                    { (member.rank !== GroupRank.REQUESTED) &&
-                                    <Flex center>
-                                        <Base pointer={ membersData.admin } className={ `icon icon-group-small-${ ((member.rank === GroupRank.OWNER) ? 'owner' : (member.rank === GroupRank.ADMIN) ? 'admin' : (membersData.admin && (member.rank === GroupRank.MEMBER)) ? 'not-admin' : '') }` } title={ LocalizeText(getRankDescription(member)) } onClick={ event => toggleAdmin(member) } />
-                                    </Flex> }
-                                    { membersData.admin && (member.rank === GroupRank.REQUESTED) &&
-                                    <Flex alignItems="center">
-                                        <Base pointer className="nitro-friends-spritesheet icon-accept" title={ LocalizeText('group.members.accept') } onClick={ event => acceptMembership(member) }></Base>
-                                    </Flex> }
-                                    { membersData.admin && (member.rank !== GroupRank.OWNER) && (member.id !== GetSessionDataManager().userId) &&
-                                    <Flex alignItems="center">
-                                        <Base pointer className="nitro-friends-spritesheet icon-deny" title={ LocalizeText(member.rank === GroupRank.REQUESTED ? 'group.members.reject' : 'group.members.kick') } onClick={ event => removeMemberOrDeclineMembership(member) }></Base>
-                                    </Flex> }
-                                </Column>
+                                <div className="nitro-group-member-row__actions">
+                                    {member.rank !== GroupRank.REQUESTED && (
+                                        <div className="flex items-center justify-center">
+                                            <div
+                                                className={classNames(
+                                                    `nitro-icon icon-group-small-${member.rank === GroupRank.OWNER ? 'owner' : member.rank === GroupRank.ADMIN ? 'admin' : membersData.admin && member.rank === GroupRank.MEMBER ? 'not-admin' : ''}`,
+                                                    membersData.admin && 'cursor-pointer'
+                                                )}
+                                                title={LocalizeText(getRankDescription(member))}
+                                                onClick={(event) => toggleAdmin(member)}
+                                            />
+                                        </div>
+                                    )}
+                                    {membersData.admin && member.rank === GroupRank.REQUESTED && (
+                                        <Flex alignItems="center">
+                                            <div
+                                                className="cursor-pointer nitro-friends-spritesheet icon-accept"
+                                                title={LocalizeText('group.members.accept')}
+                                                onClick={(event) => acceptMembership(member)}
+                                            />
+                                        </Flex>
+                                    )}
+                                    {membersData.admin && member.rank !== GroupRank.OWNER && member.id !== GetSessionDataManager().userId && (
+                                        <Flex alignItems="center">
+                                            <div
+                                                className="cursor-pointer nitro-friends-spritesheet icon-deny"
+                                                title={LocalizeText(member.rank === GroupRank.REQUESTED ? 'group.members.reject' : 'group.members.kick')}
+                                                onClick={(event) => removeMemberOrDeclineMembership(member)}
+                                            />
+                                        </Flex>
+                                    )}
+                                </div>
                             </Flex>
                         );
-                    }) }
+                    })}
                 </Grid>
-                <Flex gap={ 1 } justifyContent="between" alignItems="center">
-                    <Button disabled={ (membersData.pageIndex === 0) } onClick={ event => setPageId(prevValue => (prevValue - 1)) }>
+                <Flex alignItems="center" gap={1} justifyContent="between" className="nitro-groups-footer nitro-group-members-footer">
+                    <Button className="nitro-groups-button nitro-groups-button--pager" disabled={pageId <= 0} onClick={(event) => setPageId((prevValue) => Math.max(0, prevValue - 1))}>
                         <FaChevronLeft className="fa-icon" />
                     </Button>
-                    <Text small>
-                        { LocalizeText('group.members.pageinfo', [ 'amount', 'page', 'totalPages' ], [ membersData.totalMembersCount.toString(), (membersData.pageIndex + 1).toString(), totalPages.toString() ]) }
-                    </Text>
-                    <Button disabled={ (membersData.pageIndex === (totalPages - 1)) } onClick={ event => setPageId(prevValue => (prevValue + 1)) }>
+                    <div className="nitro-group-members-footer__page">
+                        <Text small className="nitro-group-members-footer__label">
+                            {membersData.totalMembersCount} Habbo Membri. Pagina
+                        </Text>
+                        <input
+                            className="nitro-group-members-footer__input"
+                            type="number"
+                            min={1}
+                            max={Math.max(1, totalPages)}
+                            value={membersData.pageIndex + 1}
+                            onChange={(event) => {
+                                const value = Math.min(Math.max(parseInt(event.target.value) || 1, 1), Math.max(1, totalPages));
+                                setPageId(value - 1);
+                            }}
+                        />
+                        <Text small className="nitro-group-members-footer__total">
+                            / {Math.max(1, totalPages)}
+                        </Text>
+                    </div>
+                    <Button
+                        className="nitro-groups-button nitro-groups-button--pager"
+                        disabled={totalPages === 0 || pageId >= totalPages - 1}
+                        onClick={(event) => setPageId((prevValue) => Math.min(totalPages - 1, prevValue + 1))}
+                    >
                         <FaChevronRight className="fa-icon" />
                     </Button>
                 </Flex>

@@ -1,7 +1,5 @@
-import { HabboClubLevelEnum } from '@nitrots/nitro-renderer';
-import { GetSessionDataManager } from './GetSessionDataManager';
+import { GetSessionDataManager, HabboClubLevelEnum } from '@nitrots/nitro-renderer';
 
-export function HasHabboVip(): boolean
-{
-    return (GetSessionDataManager().clubLevel >= HabboClubLevelEnum.VIP);
+export function HasHabboVip(): boolean {
+    return GetSessionDataManager().clubLevel >= HabboClubLevelEnum.VIP;
 }

@@ -1,0 +1,341 @@
+.darkui-theme {
+    --darkui-panel: rgba(24, 24, 24, 0.88);
+    --darkui-panel-soft: rgba(24, 24, 24, 0.68);
+    --darkui-border: #363636;
+    --darkui-accent: var(--colors-secondary, #545454);
+    --darkui-text: #f5f5f5;
+
+    .darkui-toolbar-shell {
+        position: fixed;
+        inset: 0;
+        z-index: 70;
+        pointer-events: none;
+    }
+
+    .darkui-side-toolbar {
+        position: absolute;
+        top: 50%;
+        left: 10px;
+        display: flex;
+        width: 82px;
+        max-height: calc(100vh - 130px);
+        padding: 8px 5px;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 9px;
+        overflow: auto;
+        transform: translateY(-50%);
+        border: 1px solid var(--darkui-border);
+        border-radius: 7px;
+        background: var(--darkui-panel-soft);
+        box-shadow: inset 1px 1px rgba(255, 255, 255, 0.08), 0 5px 18px rgba(0, 0, 0, 0.35);
+        backdrop-filter: blur(6px);
+        pointer-events: auto;
+        scrollbar-width: none;
+    }
+
+    .darkui-bottom-toolbar {
+        position: absolute;
+        right: 10px;
+        bottom: 4px;
+        left: 104px;
+        display: grid;
+        min-height: 58px;
+        grid-template-columns: minmax(190px, 1fr) minmax(320px, 520px) minmax(190px, 1fr);
+        align-items: end;
+        gap: 10px;
+        pointer-events: none;
+    }
+
+    .darkui-bottom-cluster {
+        display: flex;
+        width: max-content;
+        max-width: 100%;
+        min-height: 56px;
+        padding: 5px 8px;
+        align-items: center;
+        gap: 8px;
+        overflow-x: auto;
+        overflow-y: visible;
+        border: 1px solid var(--darkui-border);
+        border-radius: 7px;
+        background: var(--darkui-panel-soft);
+        box-shadow: inset 1px 1px rgba(255, 255, 255, 0.08), 0 5px 18px rgba(0, 0, 0, 0.28);
+        backdrop-filter: blur(6px);
+        pointer-events: auto;
+        scrollbar-width: none;
+    }
+
+    .darkui-bottom-cluster-primary {
+        justify-self: start;
+    }
+
+    .darkui-bottom-cluster-social {
+        justify-self: end;
+    }
+
+    .darkui-chat-slot {
+        display: flex;
+        width: 100%;
+        height: 42px;
+        align-items: center;
+        justify-self: center;
+        pointer-events: auto;
+    }
+
+    .darkui-toolbar-action {
+        position: relative;
+        display: flex;
+        min-width: 52px;
+        padding: 2px 3px;
+        flex: 0 0 auto;
+        flex-direction: column;
+        align-items: center;
+        gap: 2px;
+        border: 0;
+        background: transparent;
+        color: var(--darkui-text);
+        cursor: pointer;
+        filter: grayscale(1);
+        transition: filter 0.16s ease, transform 0.12s ease;
+    }
+
+    .darkui-toolbar-action:hover,
+    .darkui-toolbar-action:focus-visible {
+        filter: grayscale(0) drop-shadow(2px 2px 0 rgba(0, 0, 0, 0.75));
+        transform: translate(-1px, -1px);
+        outline: none;
+    }
+
+    .darkui-toolbar-action:active {
+        transform: none;
+        filter: grayscale(0);
+    }
+
+    .darkui-toolbar-action-icon {
+        width: 40px;
+        height: 34px;
+    }
+
+    .darkui-toolbar-action-label {
+        max-width: 70px;
+        overflow: hidden;
+        color: #fff;
+        font-size: 10px;
+        font-weight: 700;
+        line-height: 11px;
+        text-align: center;
+        text-overflow: ellipsis;
+        text-shadow: 1px 1px 0 #000;
+        white-space: nowrap;
+    }
+
+    .darkui-toolbar-action-badge {
+        position: absolute;
+        top: -3px;
+        right: -2px;
+        z-index: 2;
+    }
+
+    .darkui-toolbar-identity {
+        position: relative;
+        flex: 0 0 auto;
+    }
+
+    .darkui-toolbar-avatar {
+        position: relative;
+        display: block;
+        width: 52px;
+        height: 48px;
+        overflow: hidden;
+        border: 1px solid var(--darkui-border);
+        border-radius: 7px;
+        background: rgba(12, 12, 12, 0.5);
+        cursor: pointer;
+    }
+
+    .darkui-toolbar-me-popover {
+        position: absolute;
+        bottom: calc(100% + 12px);
+        left: 0;
+        z-index: 90;
+        pointer-events: auto;
+    }
+
+    .darkui-friend-bar {
+        min-width: 0;
+        height: 48px;
+    }
+
+    .nitro-card,
+    .nitro-card-shell:not(.nitro-wired),
+    .nitro-login-card {
+        border: 1px solid var(--darkui-border) !important;
+        border-radius: 7px;
+        background: var(--darkui-panel) !important;
+        box-shadow: inset 1px 1px rgba(255, 255, 255, 0.07), 0 7px 22px rgba(0, 0, 0, 0.42) !important;
+        color: var(--darkui-text) !important;
+        backdrop-filter: blur(7px);
+    }
+
+    .nitro-card-header,
+    .nitro-card-header-shell,
+    .nitro-login-card .card-title {
+        min-height: 40px;
+        max-height: 40px;
+        padding: 0 38px;
+        border: 0;
+        border-bottom: 1px solid var(--darkui-border);
+        border-radius: 7px 7px 0 0;
+        background: rgba(18, 18, 18, 0.92) !important;
+        box-shadow: inset 0 1px rgba(255, 255, 255, 0.09) !important;
+    }
+
+    .nitro-card-header .nitro-card-header-text,
+    .nitro-card-header-shell .nitro-card-title,
+    .nitro-login-card .card-title {
+        color: #fff !important;
+        font-size: 15px;
+        font-weight: 700;
+        line-height: 40px;
+        text-shadow: 0 2px 4px #000;
+    }
+
+    .content-area,
+    .nitro-card-content-shell,
+    .nitro-login-card .card-body {
+        background: var(--darkui-panel-soft) !important;
+        color: var(--darkui-text) !important;
+    }
+
+    .nitro-card-tabs,
+    .nitro-card-tabs-shell {
+        gap: 4px;
+        padding: 5px 6px 0 !important;
+        border: 0;
+        background: rgba(10, 10, 10, 0.72) !important;
+    }
+
+    .nitro-card-tabs .nav-item,
+    .nitro-card-tabs-shell .nitro-card-tab-item {
+        border: 0;
+        border-radius: 5px 5px 0 0;
+        background: #292826;
+        color: #fff;
+        font-weight: 700;
+    }
+
+    .nitro-card-tabs .nav-item.active,
+    .nitro-card-tabs-shell .nitro-card-tab-item-active {
+        background: var(--darkui-accent);
+    }
+
+    .nitro-login-view {
+        background: #0d0e10 !important;
+    }
+
+    .nitro-login-view::before {
+        position: absolute;
+        z-index: 4;
+        content: '';
+        inset: 0;
+        background: radial-gradient(circle at 50% 38%, rgba(65, 65, 65, 0.18), rgba(4, 4, 4, 0.78) 68%, rgba(0, 0, 0, 0.92));
+        pointer-events: none;
+    }
+
+    .nitro-login-view .login-layer {
+        opacity: 0.28;
+        filter: grayscale(0.75) contrast(1.08);
+    }
+
+    .nitro-login-view .login-widgets,
+    .nitro-login-view .login-news-stack {
+        display: none;
+    }
+
+    .nitro-login-view .login-stack {
+        width: 330px;
+    }
+
+    .nitro-login-card .field label,
+    .nitro-login-card .remember-row,
+    .nitro-login-card .remember-row span,
+    .nitro-login-card .register-card-body,
+    .nitro-login-card .card-body {
+        color: #f2f2f2 !important;
+    }
+
+    .nitro-login-card .field input {
+        border-color: #3c3c3c;
+        background: #171717;
+        color: #fff;
+        box-shadow: inset 0 1px 4px rgba(0, 0, 0, 0.65);
+    }
+
+    .nitro-login-card .register-card-body > span {
+        color: #f2f2f2 !important;
+    }
+
+    .nitro-login-card button.ok-button,
+    .nitro-login-card .register-card-body .register-link {
+        border: 1px solid #454545 !important;
+        background: linear-gradient(#3b3b3a 50%, #282827 50%) !important;
+        box-shadow: inset 0 1px rgba(255, 255, 255, 0.12), 0 2px 4px rgba(0, 0, 0, 0.4) !important;
+        color: #fff !important;
+        text-shadow: 1px 1px #000;
+    }
+
+    .nitro-login-card button.ok-button:hover,
+    .nitro-login-card .register-card-body .register-link:hover {
+        background: linear-gradient(#484846 50%, #323230 50%) !important;
+    }
+
+    .nitro-login-view .login-language-select-wrap select {
+        border-color: #3c3c3c;
+        background: #171717;
+        color: #fff;
+    }
+
+    @media (max-width: 900px), (pointer: coarse) {
+        .darkui-side-toolbar {
+            top: auto;
+            bottom: 68px;
+            left: 6px;
+            width: auto;
+            max-width: calc(100vw - 12px);
+            padding: 5px;
+            flex-direction: row;
+            transform: none;
+        }
+
+        .darkui-bottom-toolbar {
+            right: 6px;
+            bottom: 4px;
+            left: 6px;
+            display: flex;
+            min-height: 58px;
+            align-items: flex-end;
+        }
+
+        .darkui-bottom-cluster {
+            min-width: 0;
+            flex: 1 1 auto;
+        }
+
+        .darkui-chat-slot {
+            position: fixed;
+            right: 8px;
+            bottom: 132px;
+            left: 8px;
+            width: auto;
+        }
+
+        .darkui-bottom-cluster-social {
+            justify-content: flex-end;
+        }
+
+        .darkui-friend-bar {
+            display: none;
+        }
+    }
+}

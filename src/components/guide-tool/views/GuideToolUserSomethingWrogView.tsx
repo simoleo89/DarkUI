@@ -1,12 +1,11 @@
 import { FC } from 'react';
 import { LocalizeText } from '../../../api';
-import { Column, Text } from '../../../common';
+import { Text } from '../../../common';
 
-export const GuideToolUserSomethingWrogView: FC<{}> = props =>
-{
+export const GuideToolUserSomethingWrogView: FC<{}> = (props) => {
     return (
-        <Column gap={ 1 }>
-            <Text>{ LocalizeText('guide.help.request.user.guide.disconnected.error.desc') }</Text>
-        </Column>
+        <div className="flex flex-col gap-1">
+            <Text>{LocalizeText('guide.help.request.user.guide.disconnected.error.desc')}</Text>
+        </div>
     );
 };

@@ -1,30 +1,104 @@
-import { FC } from 'react';
+import { ColorConverter } from '@nitrots/nitro-renderer';
+import { FC, useMemo } from 'react';
 import { ColorUtils, LocalizeText } from '../../../../api';
-import { Button, Column, NitroCardContentView, NitroCardHeaderView, NitroCardView } from '../../../../common';
+import { Button, NitroCardContentView, NitroCardHeaderView, NitroCardView, Slider, Text } from '../../../../common';
 import { useFurnitureBackgroundColorWidget } from '../../../../hooks';
 
-export const FurnitureBackgroundColorView: FC<{}> = props =>
-{
-    const { objectId = -1, color = 0, setColor = null, applyToner = null, toggleToner = null, onClose = null } = useFurnitureBackgroundColorWidget();
+export const FurnitureBackgroundColorView: FC<{}> = (props) => {
+    const {
+        objectId = -1,
+        hue = 0,
+        saturation = 0,
+        lightness = 0,
+        setHue = null,
+        setSaturation = null,
+        setLightness = null,
+        applyToner = null,
+        toggleToner = null,
+        onClose = null
+    } = useFurnitureBackgroundColorWidget();
 
-    if(objectId === -1) return null;
+    const previewColor = useMemo(() => {
+        const hsl = ColorUtils.eight_bitVals_to_int(0, hue, saturation, lightness);
+
+        return ColorConverter.hslToRGB(hsl);
+    }, [hue, saturation, lightness]);
+
+    if (objectId === -1) return null;
 
     return (
-        <NitroCardView theme="primary-slim" className="nitro-room-widget-toner">
-            <NitroCardHeaderView headerText={ LocalizeText('widget.backgroundcolor.title') } onCloseClick={ onClose } />
-            <NitroCardContentView overflow="hidden" justifyContent="between">
-                <Column overflow="auto" gap={ 1 }>
-                    <input type="color" className="form-control" value={ ColorUtils.makeColorNumberHex(color) } onChange={ event => setColor(ColorUtils.convertFromHex(event.target.value)) } />
-                </Column>
-                <Column gap={ 1 }>
-                    <Button fullWidth variant="primary" onClick={ toggleToner }>
-                        { LocalizeText('widget.backgroundcolor.button.on') }
+        <NitroCardView className="nitro-room-widget-background-color" theme="primary-slim">
+            <NitroCardHeaderView headerText={LocalizeText('widget.backgroundcolour.title')} onCloseClick={onClose} />
+            <NitroCardContentView classNames={['bgcolor-widget-content']} overflow="hidden">
+                <div className="bgcolor-widget-panel">
+                    <div className="bgcolor-widget-top">
+                        <Text className="bgcolor-widget-info">{LocalizeText('widget.backgroundcolor.info')}</Text>
+                        <div className="bgcolor-widget-preview" style={{ backgroundColor: ColorUtils.makeColorNumberHex(previewColor) }} />
+                    </div>
+                    <div className="bgcolor-widget-slider-group">
+                        <Text fontWeight="bold" className="bgcolor-widget-label">
+                            {LocalizeText('widget.backgroundcolor.hue')}
+                        </Text>
+                        <div className="bgcolor-widget-slider-shell">
+                            <Slider
+                                disabledButton
+                                max={255}
+                                min={0}
+                                step={1}
+                                thumbClassName="bgcolor-widget-slider-thumb"
+                                trackClassName="bgcolor-widget-slider-track"
+                                value={hue}
+                                renderThumb={(props) => <div {...props} />}
+                                onChange={(value) => setHue(value as number)}
+                            />
+                        </div>
+                    </div>
+                    <div className="bgcolor-widget-slider-group">
+                        <Text fontWeight="bold" className="bgcolor-widget-label">
+                            {LocalizeText('widget.backgroundcolor.saturation')}
+                        </Text>
+                        <div className="bgcolor-widget-slider-shell">
+                            <Slider
+                                disabledButton
+                                max={255}
+                                min={0}
+                                step={1}
+                                thumbClassName="bgcolor-widget-slider-thumb"
+                                trackClassName="bgcolor-widget-slider-track"
+                                value={saturation}
+                                renderThumb={(props) => <div {...props} />}
+                                onChange={(value) => setSaturation(value as number)}
+                            />
+                        </div>
+                    </div>
+                    <div className="bgcolor-widget-slider-group">
+                        <Text fontWeight="bold" className="bgcolor-widget-label">
+                            {LocalizeText('widget.backgroundcolor.lightness')}
+                        </Text>
+                        <div className="bgcolor-widget-slider-shell">
+                            <Slider
+                                disabledButton
+                                max={255}
+                                min={0}
+                                step={1}
+                                thumbClassName="bgcolor-widget-slider-thumb"
+                                trackClassName="bgcolor-widget-slider-track"
+                                value={lightness}
+                                renderThumb={(props) => <div {...props} />}
+                                onChange={(value) => setLightness(value as number)}
+                            />
+                        </div>
+                    </div>
+                </div>
+                <div className="bgcolor-widget-actions">
+                    <Button classNames={['bgcolor-widget-button']} onClick={applyToner}>
+                        {LocalizeText('widget.backgroundcolor.button.apply')}
                     </Button>
-                    <Button fullWidth variant="primary" onClick={ applyToner }>
-                        { LocalizeText('widget.backgroundcolor.button.apply') }
+                    <Button classNames={['bgcolor-widget-button']} onClick={toggleToner}>
+                        {LocalizeText('widget.backgroundcolor.button.on')}
                     </Button>
-                </Column>
+                </div>
             </NitroCardContentView>
         </NitroCardView>
     );
-}
+};

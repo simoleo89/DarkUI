@@ -1,49 +1,51 @@
-import { CatalogGroupsComposer } from '@nitrots/nitro-renderer';
-import { FC, useEffect, useState } from 'react';
-import { SendMessageComposer } from '../../../../../api';
-import { Base, Column, Flex, Grid, Text } from '../../../../../common';
-import { useCatalog } from '../../../../../hooks';
+import { FC } from 'react';
+import { SanitizeHtml } from '../../../../../api';
+import { Column, Flex, Grid } from '../../../../../common';
+import { LayoutImage } from '../../../../../common/layout/LayoutImage';
+import { useCatalogData, useUserGroups } from '../../../../../hooks';
 import { CatalogFirstProductSelectorWidgetView } from '../widgets/CatalogFirstProductSelectorWidgetView';
 import { CatalogGuildSelectorWidgetView } from '../widgets/CatalogGuildSelectorWidgetView';
 import { CatalogPurchaseWidgetView } from '../widgets/CatalogPurchaseWidgetView';
 import { CatalogTotalPriceWidget } from '../widgets/CatalogTotalPriceWidget';
 import { CatalogLayoutProps } from './CatalogLayout.types';
 
-export const CatalogLayouGuildForumView: FC<CatalogLayoutProps> = props =>
-{
+export const CatalogLayouGuildForumView: FC<CatalogLayoutProps> = (props) => {
     const { page = null } = props;
-    const [ selectedGroupIndex, setSelectedGroupIndex ] = useState<number>(0);
-    const { currentOffer = null, setCurrentOffer = null, catalogOptions = null } = useCatalog();
-    const { groups = null } = catalogOptions;
+    const { currentOffer = null } = useCatalogData();
+    const { data: groups = null } = useUserGroups();
 
-    useEffect(() =>
-    {
-        SendMessageComposer(new CatalogGroupsComposer());
-    }, [ page ]);
-    
+    const teaserImage = page.localization.getImage(1);
+    const hasGroups = !!(groups && groups.length);
+
     return (
         <>
             <CatalogFirstProductSelectorWidgetView />
-            <Grid>
-                <Column className="bg-muted rounded p-2 text-black" size={ 7 } overflow="hidden">
-                    <Base className="overflow-auto" dangerouslySetInnerHTML={ { __html: page.localization.getText(1) } } />
+            <Grid overflow="hidden">
+                <Column overflow="hidden" size={8}>
+                    <div
+                        className="nitro-catalog-forum-text grow! min-h-0 overflow-auto text-black"
+                        dangerouslySetInnerHTML={{ __html: SanitizeHtml(page.localization.getText(1)) }}
+                    />
+                    {!!currentOffer && (
+                        <div className="flex shrink-0 flex-col gap-1">
+                            <Flex alignItems="center" gap={2}>
+                                <CatalogTotalPriceWidget />
+                                <div className="grow! min-w-0">
+                                    <CatalogGuildSelectorWidgetView ownerOnly />
+                                </div>
+                            </Flex>
+                            {hasGroups && (
+                                <div className="flex justify-center">
+                                    <CatalogPurchaseWidgetView noGiftOption={true} />
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </Column>
-                <Column size={ 5 } overflow="hidden" gap={ 1 }>
-                    { !!currentOffer &&
-                        <>
-                            <Column grow gap={ 1 }>
-                                <Text variant="white" truncate>{ currentOffer.localizationName }</Text>
-                                <Base grow>
-                                    <CatalogGuildSelectorWidgetView />
-                                </Base>
-                                <Flex justifyContent="end">
-                                    <CatalogTotalPriceWidget alignItems="end" />
-                                </Flex>
-                                <CatalogPurchaseWidgetView noGiftOption={ true } />
-                            </Column>
-                        </> }
+                <Column alignItems="center" overflow="hidden" size={4}>
+                    {!!teaserImage && <LayoutImage className="max-w-full" imageUrl={teaserImage} />}
                 </Column>
             </Grid>
         </>
     );
-}
+};

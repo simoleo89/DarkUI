@@ -1,3 +1,4 @@
+export * from './friendCategory.helpers';
 export * from './GetGroupChatData';
 export * from './IGroupChatData';
 export * from './MessengerFriend';
@@ -9,3 +10,4 @@ export * from './MessengerThread';
 export * from './MessengerThreadChat';
 export * from './MessengerThreadChatGroup';
 export * from './OpenMessengerChat';
+export * from './messenger';

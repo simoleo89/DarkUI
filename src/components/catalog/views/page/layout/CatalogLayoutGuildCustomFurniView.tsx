@@ -1,7 +1,11 @@
-import { FC } from 'react';
-import { Base, Column, Flex, Grid, Text } from '../../../../../common';
-import { useCatalog } from '../../../../../hooks';
+import { StringDataType } from '@nitrots/nitro-renderer';
+import { FC, useEffect, useMemo, useState } from 'react';
+import { FaExchangeAlt, FaSyncAlt } from 'react-icons/fa';
+import { Column } from '../../../../../common';
+import { useCatalogData, useCatalogUiState, useUserGroups } from '../../../../../hooks';
+import { CatalogFirstProductSelectorWidgetView } from '../widgets/CatalogFirstProductSelectorWidgetView';
 import { CatalogGuildBadgeWidgetView } from '../widgets/CatalogGuildBadgeWidgetView';
+import { CatalogGuildFurniRecolorFilter } from '../widgets/CatalogGuildFurniRecolorFilter';
 import { CatalogGuildSelectorWidgetView } from '../widgets/CatalogGuildSelectorWidgetView';
 import { CatalogItemGridWidgetView } from '../widgets/CatalogItemGridWidgetView';
 import { CatalogPurchaseWidgetView } from '../widgets/CatalogPurchaseWidgetView';
@@ -9,40 +13,70 @@ import { CatalogTotalPriceWidget } from '../widgets/CatalogTotalPriceWidget';
 import { CatalogViewProductWidgetView } from '../widgets/CatalogViewProductWidgetView';
 import { CatalogLayoutProps } from './CatalogLayout.types';
 
-export const CatalogLayouGuildCustomFurniView: FC<CatalogLayoutProps> = props =>
-{
-    const { page = null } = props;
-    const { currentOffer = null } = useCatalog();
-    
+export const CatalogLayouGuildCustomFurniView: FC<CatalogLayoutProps> = () => {
+    const { currentOffer = null, roomPreviewer = null } = useCatalogData();
+    const { purchaseOptions = null } = useCatalogUiState();
+    const { data: groups = null } = useUserGroups();
+    const hasGroups = !!(groups && groups.length);
+    const [groupColors, setGroupColors] = useState<{ colorA: string; colorB: string } | null>(null);
+
+    useEffect(() => {
+        const previewStuffData = purchaseOptions?.previewStuffData ?? null;
+
+        if (!previewStuffData) return;
+
+        const colorA = (previewStuffData as StringDataType).getValue(3);
+        const colorB = (previewStuffData as StringDataType).getValue(4);
+
+        if (!colorA || !colorA.length) return;
+
+        const next = { colorA, colorB: colorB && colorB.length ? colorB : colorA };
+
+        setGroupColors((prev) => (prev && prev.colorA === next.colorA && prev.colorB === next.colorB ? prev : next));
+    }, [purchaseOptions]);
+
+    const tintColor = useMemo(() => {
+        if (!groupColors) return null;
+
+        const { colorA, colorB } = groupColors;
+
+        if (colorB && colorB !== colorA) return `linear-gradient(90deg, #${colorA} 0 50%, #${colorB} 50% 100%)`;
+
+        return `#${colorA}`;
+    }, [groupColors]);
+
     return (
-        <Grid>
-            <Column size={ 7 } overflow="hidden">
-                <CatalogItemGridWidgetView />
+        <>
+            {!!groupColors && <CatalogGuildFurniRecolorFilter colorA={groupColors.colorA} colorB={groupColors.colorB} />}
+            <CatalogFirstProductSelectorWidgetView />
+            <Column fullHeight gap={1} overflow="hidden">
+                {!!currentOffer && (
+                    <div className="relative shrink-0 overflow-hidden">
+                        <button className="nitro-catalog-preview-btn nitro-catalog-preview-rotate" onClick={() => roomPreviewer?.changeRoomObjectDirection()}>
+                            <FaSyncAlt />
+                        </button>
+                        <button className="nitro-catalog-preview-btn nitro-catalog-preview-state" onClick={() => roomPreviewer?.changeRoomObjectState()}>
+                            <FaExchangeAlt />
+                        </button>
+                        <CatalogViewProductWidgetView height={210} />
+                        <div className="absolute bottom-1 left-1 z-10">
+                            <CatalogGuildBadgeWidgetView />
+                        </div>
+                        <div className="nitro-catalog-preview-price absolute bottom-1 right-1">
+                            <CatalogTotalPriceWidget alignItems="end" />
+                        </div>
+                    </div>
+                )}
+                <div className="grow! min-h-0 overflow-auto">
+                    <CatalogItemGridWidgetView className="nitro-catalog-grid" columnCount={6} columnMinHeight={80} columnMinWidth={55} tintColor={tintColor} />
+                </div>
+                {!!currentOffer && (
+                    <div className="flex shrink-0 flex-col gap-1">
+                        <CatalogGuildSelectorWidgetView />
+                        {hasGroups && <CatalogPurchaseWidgetView noGiftOption={true} />}
+                    </div>
+                )}
             </Column>
-            <Column center={ !currentOffer } size={ 5 } overflow="hidden">
-                { !currentOffer &&
-                    <>
-                        { !!page.localization.getImage(1) && <img alt="" src={ page.localization.getImage(1) } /> }
-                        <Text variant="white" center dangerouslySetInnerHTML={ { __html: page.localization.getText(0) } } />
-                    </> }
-                { currentOffer &&
-                    <>
-                        <Base position="relative" overflow="hidden">
-                            <CatalogViewProductWidgetView />
-                            <CatalogGuildBadgeWidgetView position="absolute" className="bottom-1 end-1" />
-                        </Base>
-                        <Column grow gap={ 1 }>
-                            <Text variant="white" truncate>{ currentOffer.localizationName }</Text>
-                            <Base grow>
-                                <CatalogGuildSelectorWidgetView />
-                            </Base>
-                            <Flex justifyContent="end">
-                                <CatalogTotalPriceWidget alignItems="end" />
-                            </Flex>
-                            <CatalogPurchaseWidgetView />
-                        </Column>
-                    </> }
-            </Column>
-        </Grid>
+        </>
     );
-}
+};
